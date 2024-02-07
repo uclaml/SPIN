@@ -55,6 +55,14 @@ The generated data is in json format where each data contains the following attr
 bash scripts/generate.sh
 ``` 
 
+### Step 1.5: Gather generations and convert data type
+```
+python spin/convert_data.py [options]
+```
+Options
+- `--num_fracs`: number of files to load in.
+- `--output_dir`: directory to the data files
+
 ### Step 2: Fine-tuning
 ```
 accelerate launch --config_file configs/multi_gpu.yaml --num_processes=8 --main_process_port 29500 spin/run_spin.py configs/config.yaml

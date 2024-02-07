@@ -44,7 +44,10 @@ data = load_dataset(args.input_dir, split='train')
 data = data.shuffle(seed=42)
 if args.frac_len > 0:
     sub_len = args.frac_len 
-    data = data[sub_len*data_frac:sub_len*(data_frac+1)]['chosen']
+    if sub_len*(data_frac+1) > len(data):
+        data = data[sub_len*data_frac:]['chosen']
+    else:
+        data = data[sub_len*data_frac:sub_len*(data_frac+1)]['chosen']
 
 prompts_all = ["### Instruction: " + data[idx][0]['content'] + "\n\n### Response: " for idx in range(len(data))]
 prompts_old = [data[idx][0]['content'] for idx in range(len(data))]
