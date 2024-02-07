@@ -1,3 +1,10 @@
+<p align="center">
+    <img src="images/spin_dalle.png" width="30%"> <br>
+</p>
+<p align="center">
+    🤗 <a href="https://huggingface.co/collections/UCLA-AGI/zephyr-7b-sft-full-spin-65c361dfca65637272a02c40" target="_blank">Models</a> | 🤗 <a href="https://huggingface.co/collections/UCLA-AGI/datasets-spin-65c3624e98d4b589bbc76f3a" target="_blank">Datasets</a>
+</p>
+
 # Self-Play Fine-Tuning (SPIN)
 
 This official repo holds code of the paper "[Self-Play Fine-Tuning Converts Weak Language Models to Strong Language Models](https://arxiv.org/abs/2401.01335)".
@@ -23,12 +30,20 @@ Authors: [Zixiang Chen](https://sites.google.com/view/zxchen)\*, [Yihe Deng](htt
 - [Citation](#Citation)
 
 ## Setup
-Install the following Python dependencies to reproduce our results.
-
-**[TODO]** Instructions for set-up.
+The following steps provide the necessary setup to run our codes.
+1. Create a Python virtual environment with Conda:
+```
+conda create -n myenv python=3.10
+conda activate myenv
+```
+2. Install the following Python dependencies to run the codes.
+```
+python -m pip install .
+python -m pip install flash-attn --no-build-isolation
+```
 
 ### Data 
-We provide the data used in our experiments along with the synthetic data we generated in this repo as well as on HuggingFace. These data is converted to .parquet format for fine-tuning (e.g. [iter0](data/iter0/train_prefs-00000-of-00001.parquet)). 
+We provide the data used in our experiments along with the synthetic data we generated in this repo as well as on HuggingFace. These data is converted to .parquet format for fine-tuning (e.g. [iter0](data/iter0), [iter1](data/iter1), [iter2](data/iter2), [iter3](data/iter3)). 
 
 🔍Note: With the provided data, one can directly jump to [Step 2: Fine-tuning](#step-2-fine-tuning) without doing generation on their own. You may also start from any iteration to reproduce our results using our open-sourced checkpoints.
 
@@ -62,7 +77,8 @@ The generated data is in json format where each data contains the following attr
 }
 ```
 
-#### Examples
+#### Example
+The following code generates 8k synthetic data for iteration 1.
 ```
 bash scripts/generate.sh
 ``` 
@@ -81,7 +97,7 @@ accelerate launch --config_file configs/multi_gpu.yaml --num_processes=8 --main_
 ```
 <!-- **[TODO]**: wrap up necessary codes into the folder spin. Add explainations/instructions here.  -->
 
-You might need to change the configuration in `configs/config.yaml1`. Here are some key configs you might need to customize:
+You might need to change the configuration in `configs/config.yaml`. Here are some key configs you might need to customize:
 
 - `--model_name_or_path`: load model checkpoint for finetuning.
     - default: `alignment-handbook/zephyr-7b-sft-full`
@@ -114,3 +130,6 @@ If you find this repo useful for your research, please consider citing the paper
       primaryClass={cs.LG}
 }
 ```
+
+## Acknowledgement
+This repo is built upon [The Alignment Handbook](https://github.com/huggingface/alignment-handbook). We thank the authors for their great work.

@@ -160,5 +160,5 @@ cython_debug/
 .idea/
 
 # Temp folders
-data/
+generated/
 wandb/
