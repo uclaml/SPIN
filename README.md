@@ -12,13 +12,25 @@ Authors: [Zixiang Chen](https://sites.google.com/view/zxchen)\*, [Yihe Deng](htt
 ## 🔔 News 
 - **[01/02/2024]** Our paper is released on arXiv: https://arxiv.org/abs/2401.01335.
 
+
+## Table of Contents
+- [Setup](#Setup)
+    - [Data](#Data)
+- [Usage](#Usage)
+    - [Step 1: Generation](#step-1-generation)
+    - [Step 1.5: Gather generations and convert data type](#step-15-gather-generations-and-convert-data-type)
+    - [Step 2: Fine-tuning](#step-2-fine-tuning)
+- [Citation](#Citation)
+
 ## Setup
 Install the following Python dependencies to reproduce our results.
 
 **[TODO]** Instructions for set-up.
 
 ### Data 
-We provide the data used in our experiments along with the synthetic data we generated in this repo as well as on HuggingFace. These data is converted to .parquet format for fine-tuning (e.g. [iter0](data/iter0/train_prefs-00000-of-00001.parquet)).
+We provide the data used in our experiments along with the synthetic data we generated in this repo as well as on HuggingFace. These data is converted to .parquet format for fine-tuning (e.g. [iter0](data/iter0/train_prefs-00000-of-00001.parquet)). 
+
+🔍Note: With the provided data, one can directly jump to [Step 2: Fine-tuning](#step-2-fine-tuning) without doing generation on their own. You may also start from any iteration to reproduce our results using our open-sourced checkpoints.
 
 
 ## Usage
