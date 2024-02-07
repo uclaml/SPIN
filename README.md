@@ -59,7 +59,7 @@ accelerate launch generate.py --model alignment-handbook/zephyr-7b-sft-full --fr
 
 ### Step 2: Fine-tuning
 ```
-bash pipeline.sh
+bash scripts/finetune.sh
 ```
 **[TODO]**: wrap up necessary codes into the folder spin. Add explainations/instructions here. 
 
