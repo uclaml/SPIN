@@ -79,7 +79,23 @@ Options
 ```
 accelerate launch --config_file configs/multi_gpu.yaml --num_processes=8 --main_process_port 29500 spin/run_spin.py configs/config.yaml
 ```
-**[TODO]**: wrap up necessary codes into the folder spin. Add explainations/instructions here. 
+<!-- **[TODO]**: wrap up necessary codes into the folder spin. Add explainations/instructions here.  -->
+
+You might need to change the configuration in `configs/config.yaml1`. Here are some key configs you might need to customize:
+
+- `--model_name_or_path`: load model checkpoint for finetuning.
+    - default: `alignment-handbook/zephyr-7b-sft-full`
+- `--output_dir`: the output directory of finetuned model and checkpoints 
+    - default: `outputs`
+- `--output_dir`: directory to save the output data. 
+- `per_device_train_batch_size`: batch size on one GPU
+    - default: 16
+- `gradient_accumulation_steps`: make sure that per_device_train_batch_size\*num_processes\*gradient_accumulation_steps equals to your true batch size.
+- `num_train_epochs`: the training epochs of this iteration
+    - default: 3
+- `beta`: beta in SPIN
+    - default: 0.1
+
 
 #### Examples
 ```
