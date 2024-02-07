@@ -52,17 +52,19 @@ The generated data is in json format where each data contains the following attr
 
 #### Examples
 ```
-accelerate launch generate.py --model alignment-handbook/zephyr-7b-sft-full --frac_len 800 --data_frac 0
-accelerate launch generate.py --model alignment-handbook/zephyr-7b-sft-full --frac_len 800 --data_frac 1
-...
+bash scripts/generate.sh
 ``` 
 
 ### Step 2: Fine-tuning
 ```
-bash scripts/finetune.sh
+accelerate launch --config_file configs/multi_gpu.yaml --num_processes=8 --main_process_port 29500 spin/run_spin.py configs/config.yaml
 ```
 **[TODO]**: wrap up necessary codes into the folder spin. Add explainations/instructions here. 
 
+#### Examples
+```
+bash scripts/finetune.sh
+```
 
 ## Citation
 If you find this repo useful for your research, please consider citing the paper
