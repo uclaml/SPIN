@@ -97,7 +97,17 @@ python spin/convert_data.py [options]
 ```
 Options
 - `--num_fracs`: number of files to load in.
-- `--output_dir`: directory to the data files
+- `--input_dir`: directory to the generated data files.
+- `--output_dir`: directory for the unified data that will be used for fine-tuning. 
+
+The code will generate the two final data files including `train_prefs-00000-of-00001.parquet` and `test_prefs-00000-of-00001.parquet`, which will be used for fine-tuning.
+
+Note: make sure to collect the generated data filed into the same directory of `--input_dir`. 
+
+#### Example
+```
+python spin/convert_data.py --output_dir new_data/iter0 --input_dir generated/iter0 --num_fracs 63
+```
 
 ### Step 2: Fine-tuning
 ```
