@@ -116,7 +116,6 @@ setup(
     name="spin",
     version="0.1.0.dev0",  
     author="uclaml",
-    author_email="lewis@huggingface.co",
     description="Self-Play Fine-Tuning (SPIN)",
     long_description=open("README.md", "r", encoding="utf-8").read(),
     long_description_content_type="text/markdown",
