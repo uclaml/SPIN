@@ -7,20 +7,18 @@
 
 # Self-Play Fine-Tuning (SPIN)
 
+![Mistral-7B](https://img.shields.io/badge/Model-Mistral--7B--v0.1-green) ![Open LLM](https://img.shields.io/badge/Task-Open_LLM_Leaderboard-red) ![MT-Bench](https://img.shields.io/badge/Task-MT--Bench-red)
+
 This official repo holds code of the paper "[Self-Play Fine-Tuning Converts Weak Language Models to Strong Language Models](https://arxiv.org/abs/2401.01335)".
 
 Authors: [Zixiang Chen](https://sites.google.com/view/zxchen)\*, [Yihe Deng](https://sites.google.com/g.ucla.edu/yihedeng/)\*, [Huizhuo Yuan](https://scholar.google.com/citations?user=8foZzX4AAAAJ)\*, [Kaixuan Ji](https://scholar.google.com/citations?user=FOoKDukAAAAJ), [Quanquan Gu](https://web.cs.ucla.edu/~qgu/)
-
-<p align="center">
-    <img src="images/iter_openllm.png" width="50%"> <br>
-  Average score of <b>SPIN</b> at different iterations on the HuggingFace Open LLM leaderboard. 
-</p>
 
 ## 🔔 News 
 - **[01/02/2024]** Our paper is released on arXiv: https://arxiv.org/abs/2401.01335.
 
 
 ## Table of Contents
+- [About SPIN](#🌀-about-spin)
 - [Setup](#Setup)
     - [Data](#Data)
 - [Usage](#Usage)
@@ -29,6 +27,19 @@ Authors: [Zixiang Chen](https://sites.google.com/view/zxchen)\*, [Yihe Deng](htt
     - [Step 2: Fine-tuning](#step-2-fine-tuning)
 - [Citation](#Citation)
 - [Acknowledgement](#Acknowledgement)
+
+## 🌀 About SPIN
+**SPIN** utilizes a self-play mechanism, allowing an LLM to improve itself by playing against its previous iterations, without needing additional human-annotated preference data than the SFT dataset itself. More specifically, the LLM generates its own training data from its previous iterations, refining its policy by discerning these self-generated responses from the original SFT data. 
+<p align="center">
+    <img src="images/iter_openllm.png" width="35%"> <br>
+  Average score of <b>SPIN</b> at different iterations on the HuggingFace Open LLM leaderboard. 
+</p>
+SPIN can significantly enhance the performance of an LLM after SFT across various benchmarks, outperforming the model trained with direct preference optimization (DPO) on labelled preference datasets. The approach is theoretically grounded, ensuring that the LLM aligns with the target data distribution, and empirically validated through extensive evaluations on multiple datasets. 
+<p align="center">
+    <img src="images/dpo_compare.png" width="80%"> <br>
+  Performance comparison with DPO training across the six benchmark datasets. SPIN at iteration 0 achieves comparable performance to DPO training with 62k new data. At iteration 1, SPIN has already surpassed DPO training on the majority of datasets. 
+</p>
+For more details, you can check our paper [here](https://arxiv.org/abs/2401.01335).
 
 ## Setup
 The following steps provide the necessary setup to run our codes.
