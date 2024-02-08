@@ -21,6 +21,7 @@ parser.add_argument('--frac_len', type=int, default=0)
 parser.add_argument('--output_dir', type=str, default='generated/iter1')
 parser.add_argument('--batch_size', type=int, default=16)
 parser.add_argument('--input_dir', type=str, default='data/iter0')
+parser.add_argument('--split', type=str, default='train')
 
 args = parser.parse_args()
 model_path = args.model
@@ -40,7 +41,7 @@ tokenizer = AutoTokenizer.from_pretrained(model_path)
 tokenizer.pad_token = tokenizer.eos_token
 
 # load data
-data = load_dataset(args.input_dir, split='train')
+data = load_dataset(args.input_dir, split=args.split)
 data = data.shuffle(seed=42)
 if args.frac_len > 0:
     sub_len = args.frac_len 
@@ -104,6 +105,10 @@ if accelerator.is_local_main_process:
     # collecting data
     for idx in range(len(corrects_all)):
         d = {"chosen": [{"role": "user", "content": prompts_old[idx]}, {"role": "assistant", "content": corrects_all[idx]}], "rejected": [{"role": "user", "content": prompts_old[idx]}, {"role": "assistant", "content": results[idx]}]}
-        with open(f"{args.output_dir}/loser_{data_frac}.jsonl", 'a') as f:
+        if args.split == 'test':
+            filename = f"{args.output_dir}/loser_{data_frac}_test.jsonl"
+        else:
+            filename = f"{args.output_dir}/loser_{data_frac}.jsonl"
+        with open(filename, 'a') as f:
             json.dump(d, f)
             f.write('\n')
