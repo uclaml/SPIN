@@ -39,6 +39,7 @@ SPIN can significantly enhance the performance of an LLM after SFT across variou
     <img src="images/dpo_compare.png" width="80%"> <br>
   Performance comparison with DPO training across the six benchmark datasets. SPIN at iteration 0 achieves comparable performance to DPO training with 62k new data. At iteration 1, SPIN has already surpassed DPO training on the majority of datasets. 
 </p>
+
 For more details, you can check our paper [here](https://arxiv.org/abs/2401.01335).
 
 ## Setup
