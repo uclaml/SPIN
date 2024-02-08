@@ -5,6 +5,7 @@ from pathlib import Path
 import pyarrow.parquet as pq
 import logging
 import os
+import random
 
 
 def setup_arg_parser():
@@ -31,8 +32,8 @@ def load_and_process_data_metamath(dataset_name, split):
     try:
         dataset = load_dataset(dataset_name, split=split)
         reformatted_data = [{
-            'rejected': [message['query'], {"role": "assistant", "content": ""}], 
-            'chosen': [message['query'], message['response']]
+            'rejected': [{"role": "user", "content": message['query']}, {"role": "assistant", "content": ""}], 
+            'chosen': [{"role": "user", "content": message['query']}, {"role": "assistant", "content": message['response']}]
         } for message in dataset]
         return reformatted_data
     except Exception as e:
@@ -60,9 +61,11 @@ def main():
     if args.data == 'HuggingFaceH4/ultrachat_200k':
         train_data = load_and_process_data_ultrachat(args.data, 'train_sft')
         test_data = load_and_process_data_ultrachat(args.data, 'test_sft')
-    elif args.data == 'Hmeta-math/MetaMathQA':
+    elif args.data == 'meta-math/MetaMathQA':
         train_data = load_and_process_data_metamath(args.data, 'train')
-        test_data = load_and_process_data_metamath(args.data, 'test')
+        random.shuffle(train_data)
+        train_data = train_data[:-1000]
+        test_data = train_data[-1000:]
 
     train_json_path = output_dir / 'train.json'
     test_json_path = output_dir / 'test.json'
