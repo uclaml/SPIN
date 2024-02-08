@@ -54,10 +54,33 @@ huggingface-cli login --token "${your_access_token}"
 ### Data 
 We provide the data used in our experiments along with the synthetic data we generated in this repo as well as on HuggingFace. These data is converted to .parquet format for fine-tuning (e.g. [iter0](https://huggingface.co/datasets/UCLA-AGI/SPIN_iter0), [iter1](https://huggingface.co/datasets/UCLA-AGI/SPIN_iter1), [iter2](https://huggingface.co/datasets/UCLA-AGI/SPIN_iter2), [iter3](https://huggingface.co/datasets/UCLA-AGI/SPIN_iter3)). 
 
-🔍Note: With the provided data, one can directly jump to [Step 2: Fine-tuning](#step-2-fine-tuning) without doing generation on their own. You may also start from any iteration to reproduce our results using our open-sourced checkpoints.
+🔍Note: With the provided data, you can directly jump to [Step 2: Fine-tuning](#step-2-fine-tuning) without doing generation on their own. You may also start from any iteration to reproduce our results using our open-sourced checkpoints.
+
+The input data is required to be of the same format where each data contains the following attributes, as similar to [HuggingFaceH4/ultrafeedback_binarized](https://huggingface.co/datasets/HuggingFaceH4/ultrafeedback_binarized):
+```
+{
+    "chosen": [{"role": "user", "content": <prompt>}, 
+               {"role": "assistant", "content": <ground truth>}],
+    "rejected": [{"role": "user", "content": <prompt>}, 
+                 {"role": "assistant", "content": <generation>}]
+}
+```
+🔍Note: During data generation, the content for rejected response can be empty, as we only uses prompt to generate model responses. 
 
 
 ## Usage
+### Step 0 (optional): Reformatting SFT dataset
+```
+python spin/reformat.py [options]
+```
+Options
+- `--data`: directory to the SFT dataset (local or huggingface)
+    - default: `HuggingFaceH4/ultrachat_200k`
+- `--output_dir`: local directory to the reformated data files 
+    - default: `UCLA-AGI/SPIN_iter0`
+
+🔍Note: If choosing to use SPIN on the entire dataset of `HuggingFaceH4/ultrachat_200k` instead of our 50k subset, one can reformat the original data with `spin/reformat.py`. To use other datasets, simply convert the data into the same format and resume with the following steps. 
+
 ### Step 1: Generation
 ```
 accelerate launch spin/generate.py [options]
@@ -66,8 +89,8 @@ Options
 - `--model`: load model checkpoint for generation.
     - default: `alignment-handbook/zephyr-7b-sft-full`
 - `--input_dir`: directory to the data files with prompts for generation
-    - The code is for generation based on old data. 
-    - default: `synthetic_ultra_14k`
+    - The code is for generation based on data of the format given below. 
+    - default: `UCLA-AGI/SPIN_iter0`
 - `--output_dir`: directory to save the output data. 
 - `--batch_size`: per device batch size
     - default: 16

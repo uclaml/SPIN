@@ -20,7 +20,7 @@ parser.add_argument('--data_frac', type=int, default=0)
 parser.add_argument('--frac_len', type=int, default=0)
 parser.add_argument('--output_dir', type=str, default='generated/iter1')
 parser.add_argument('--batch_size', type=int, default=16)
-parser.add_argument('--input_dir', type=str, default='data/iter0')
+parser.add_argument('--input_dir', type=str, default='UCLA-AGI/SPIN_iter0')
 parser.add_argument('--split', type=str, default='train')
 
 args = parser.parse_args()
