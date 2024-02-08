@@ -6,19 +6,33 @@ import pyarrow.parquet as pq
 import logging
 import os
 
-data = 'HuggingFaceH4/ultrachat_200k'
 
 def setup_arg_parser():
     parser = argparse.ArgumentParser()
     parser.add_argument('--output_dir', type=str, default='reformatted')
+    parser.add_argument('--data', type=str, default='HuggingFaceH4/ultrachat_200k')
     return parser.parse_args()
 
-def load_and_process_data(dataset_name, split):
+
+def load_and_process_data_ultrachat(dataset_name, split):
     try:
         dataset = load_dataset(dataset_name, split=split)
         reformatted_data = [{
             'rejected': [message['messages'][0], {"role": "assistant", "content": ""}], 
             'chosen': [message['messages'][0], message['messages'][1]]
+        } for message in dataset]
+        return reformatted_data
+    except Exception as e:
+        logging.error(f"Error loading or processing dataset: {e}")
+        return []
+
+
+def load_and_process_data_metamath(dataset_name, split):
+    try:
+        dataset = load_dataset(dataset_name, split=split)
+        reformatted_data = [{
+            'rejected': [message['query'], {"role": "assistant", "content": ""}], 
+            'chosen': [message['query'], message['response']]
         } for message in dataset]
         return reformatted_data
     except Exception as e:
@@ -43,8 +57,12 @@ def main():
     output_dir = Path(args.output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
 
-    train_data = load_and_process_data(data, 'train_sft')
-    test_data = load_and_process_data(data, 'test_sft')
+    if args.data == 'HuggingFaceH4/ultrachat_200k':
+        train_data = load_and_process_data_ultrachat(args.data, 'train_sft')
+        test_data = load_and_process_data_ultrachat(args.data, 'test_sft')
+    elif args.data == 'Hmeta-math/MetaMathQA':
+        train_data = load_and_process_data_metamath(args.data, 'train')
+        test_data = load_and_process_data_metamath(args.data, 'test')
 
     train_json_path = output_dir / 'train.json'
     test_json_path = output_dir / 'test.json'
