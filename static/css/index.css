@@ -115,12 +115,10 @@ body {
 }
 
 .results-carousel .item {
-  margin: 10px;
+  margin: 20px;
   overflow: hidden;
   padding: 20px;
   font-size: 0;
-  height: 300px; /* Example height */
-  width: auto;
 }
 
 .results-carousel video {
