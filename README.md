@@ -95,9 +95,11 @@ We also provide our model checkpoints at iteration 0,1,2,3 on HuggingFace.
 | zephyr-7b-sft-full-SPIN-iter2      |   🤗 [HuggingFace](https://huggingface.co/UCLA-AGI/zephyr-7b-sft-full-SPIN-iter2) |
 | zephyr-7b-sft-full-SPIN-iter3     |   🤗 [HuggingFace](https://huggingface.co/UCLA-AGI/zephyr-7b-sft-full-SPIN-iter3) |
 
-🔍 Note: With the provided data, you can directly jump to [Step 2: Fine-tuning](#step-2-fine-tuning) without doing generation on your own. You may also start from any iteration to reproduce our results using our open-sourced checkpoints.
+🔍 __Note__: With the provided data, you can directly jump to [Step 2: Fine-tuning](#step-2-fine-tuning) without doing data generation on your own. You may also start from any iteration to reproduce our results using our open-sourced model checkpoints.
 
 ## Usage
+For SPIN, we generate all synthetic data at once for an iteration, and fine-tune the LLM based on the real and synthetic data pairs. 
+
 ### Step 0 (optional): Reformatting SFT dataset
 ```
 python spin/reformat.py [options]
@@ -124,7 +126,7 @@ Options
 - `--batch_size`: per device batch size
     - default: 16
 - `--data_frac`: break data into fractions for generations across server.
-    - `--frac_len`: length of the data fraction. Default is 0 which uses the entire dataset for generation. Set `frac_len` to a positive number to generate only for a fraction of data.  
+    - `--frac_len`: length of the data fraction. Default is 0 which uses the entire dataset for generation. Set `frac_len` to a positive number to generate only for a fraction of data. __Note__: we recommend using a smaller frac_len (e.g. 800) to generate data by small batches to avoid unexpected crashes as data generation can be very time-consuming.  
     - Setting `data_frac` to be 0, 1, 2... to generate for different fractions of length `frac_len`.
     - Note: maintain the same frac length when doing generation using data_frac. It's recommended to set a smaller `frac_len` to 800.
 - `--split`: choose the split for data generation
