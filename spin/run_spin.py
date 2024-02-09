@@ -63,8 +63,7 @@ def main():
     # Load datasets
     ###############
     raw_datasets = get_datasets(data_args, splits=data_args.dataset_splits)
-    # print(raw_datasets)
-    # exit()
+
     logger.info(
         f"Training on the following splits: {[split + ' : ' + str(dset.num_rows) for split, dset in raw_datasets.items()]}"
     )
@@ -90,7 +89,7 @@ def main():
     # Replace column names with what TRL needs, text_chosen -> chosen and text_rejected -> rejected
     for split in ["train", "test"]:
         raw_datasets[split] = raw_datasets[split].rename_columns(
-            {"text_prompt": "prompt", "text_real": "real", "text_generated": "generated"}
+            {"text_real": "real", "text_generated": "generated"}
         )
 
     torch_dtype = (
@@ -109,30 +108,6 @@ def main():
     )
 
     model = model_args.model_name_or_path
-    # if is_adapter_model(model, model_args.model_revision):
-    #     # load the model, merge the adapter weights and unload the adapter
-    #     # Note: to run QLora, you will need to merge the based model separately as the merged model in 16bit
-    #     logger.info(f"Merging peft adapters for {model_args.model_name_or_path=}")
-
-    #     peft_config = PeftConfig.from_pretrained(model_args.model_name_or_path, revision=model_args.model_revision)
-
-    #     model_kwargs = dict(
-    #         revision=model_args.base_model_revision,
-    #         trust_remote_code=model_args.trust_remote_code,
-    #         use_flash_attention_2=model_args.use_flash_attention_2,
-    #         torch_dtype=torch_dtype,
-    #         use_cache=False if training_args.gradient_checkpointing else True,
-    #     )
-    #     base_model = AutoModelForCausalLM.from_pretrained(
-    #         peft_config.base_model_name_or_path,
-    #         **model_kwargs,
-    #     )
-    #     model = PeftModel.from_pretrained(
-    #         base_model, model_args.model_name_or_path, revision=model_args.model_revision
-    #     )
-    #     model.eval()
-    #     model = model.merge_and_unload()
-    #     model_kwargs = None
 
     ref_model = model
     ref_model_kwargs = model_kwargs
