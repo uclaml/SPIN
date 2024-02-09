@@ -1,4 +1,4 @@
-__version__ = "0.2.0.dev0"
+__version__ = "0.1.0.dev0"
 
 from .configs import DataArguments, SPINConfig, H4ArgumentParser, ModelArguments, SFTConfig
 from .data import apply_chat_template, get_datasets

@@ -51,7 +51,7 @@ conda activate myenv
 ```
 2. Install PyTorch `v2.1.0` with compatible cuda version, following instructions from [PyTorch Installation Page](https://pytorch.org/get-started/locally/). For example with cuda 11:
 ```
-pip3 install torch==2.1.0 torchvision==0.16.0 torchaudio==2.1.0 --index-url https://download.pytorch.org/whl/cu118
+pip install torch==2.1.0 torchvision==0.16.0 torchaudio==2.1.0 --index-url https://download.pytorch.org/whl/cu118
 ```
 3. Install the following Python dependencies to run the codes.
 ```
@@ -64,11 +64,16 @@ huggingface-cli login --token "${your_access_token}"
 ```
 
 ### Data 
-We provide the data used in our experiments along with the synthetic data we generated in this repo as well as on HuggingFace. These data is converted to .parquet format for fine-tuning (e.g. [iter0](https://huggingface.co/datasets/UCLA-AGI/SPIN_iter0), [iter1](https://huggingface.co/datasets/UCLA-AGI/SPIN_iter1), [iter2](https://huggingface.co/datasets/UCLA-AGI/SPIN_iter2), [iter3](https://huggingface.co/datasets/UCLA-AGI/SPIN_iter3)). 
+We provide the data used in our experiments along with the synthetic data we generated in this repo as well as on HuggingFace. These data is converted to .parquet format for fine-tuning. 
 
-🔍Note: With the provided data, you can directly jump to [Step 2: Fine-tuning](#step-2-fine-tuning) without doing generation on their own. You may also start from any iteration to reproduce our results using our open-sourced checkpoints.
+| Dataset                    |                           Download                           |
+| :----------------------- | :----------------------------------------------------------: |
+| SPIN_iter0     | 🤗 [HuggingFace](https://huggingface.co/datasets/UCLA-AGI/SPIN_iter0) |
+| SPIN_iter1 | 🤗 [HuggingFace](https://huggingface.co/datasets/UCLA-AGI/SPIN_iter1) |
+| SPIN_iter2      |   🤗 [HuggingFace](https://huggingface.co/datasets/UCLA-AGI/SPIN_iter2) |
+| SPIN_iter3      |   🤗 [HuggingFace](https://huggingface.co/datasets/UCLA-AGI/SPIN_iter3) |
 
-The input data is required to be of the same format where each data contains the following attributes, as similar to [HuggingFaceH4/ultrafeedback_binarized](https://huggingface.co/datasets/HuggingFaceH4/ultrafeedback_binarized):
+The input data for our code is required to be of the same format where each data contains the following attributes, as similar to [HuggingFaceH4/ultrafeedback_binarized](https://huggingface.co/datasets/HuggingFaceH4/ultrafeedback_binarized):
 ```
 {
     "chosen": [{"role": "user", "content": <prompt>}, 
@@ -77,8 +82,19 @@ The input data is required to be of the same format where each data contains the
                  {"role": "assistant", "content": <generation>}]
 }
 ```
-🔍Note: During data generation, the content for rejected response can be empty, as we only uses prompt to generate model responses. 
+🔍 Note: During data generation, the content for rejected response can be empty, as we only uses prompt to generate model responses. 
 
+### Model
+We also provide our model checkpoints at iteration 0,1,2,3 on HuggingFace.
+
+| Model                    |                           Download                           |
+| :----------------------- | :----------------------------------------------------------: |
+| zephyr-7b-sft-full-SPIN-iter0     | 🤗 [HuggingFace](https://huggingface.co/UCLA-AGI/zephyr-7b-sft-full-SPIN-iter0) |
+| zephyr-7b-sft-full-SPIN-iter1 | 🤗 [HuggingFace](https://huggingface.co/UCLA-AGI/zephyr-7b-sft-full-SPIN-iter1) |
+| zephyr-7b-sft-full-SPIN-iter2      |   🤗 [HuggingFace](https://huggingface.co/UCLA-AGI/zephyr-7b-sft-full-SPIN-iter2) |
+| zephyr-7b-sft-full-SPIN-iter3     |   🤗 [HuggingFace](https://huggingface.co/UCLA-AGI/zephyr-7b-sft-full-SPIN-iter3) |
+
+🔍 Note: With the provided data, you can directly jump to [Step 2: Fine-tuning](#step-2-fine-tuning) without doing generation on your own. You may also start from any iteration to reproduce our results using our open-sourced checkpoints.
 
 ## Usage
 ### Step 0 (optional): Reformatting SFT dataset
@@ -91,7 +107,7 @@ Options
 - `--output_dir`: local directory to the reformated data files 
     - default: `UCLA-AGI/SPIN_iter0`
 
-🔍Note: If choosing to use SPIN on the entire dataset of `HuggingFaceH4/ultrachat_200k` instead of our 50k subset, one can reformat the original data with `spin/reformat.py`. To use other datasets, simply convert the data into the same format and resume with the following steps. 
+🔍 Note: If choosing to use SPIN on the entire dataset of `HuggingFaceH4/ultrachat_200k` instead of our 50k subset, one can reformat the original data with `spin/reformat.py`. To use other datasets, simply convert the data into the same format and resume with the following steps. 
 
 ### Step 1: Generation
 ```
@@ -155,15 +171,14 @@ You might need to change the configuration in `configs/config.yaml`. Here are so
 
 - `--model_name_or_path`: load model checkpoint for finetuning.
     - default: `alignment-handbook/zephyr-7b-sft-full`
-- `--output_dir`: the output directory of finetuned model and checkpoints 
+- `--output_dir`: the output directory of finetuned model and checkpoints. 
     - default: `outputs`
-- `--output_dir`: directory to save the output data. 
-- `per_device_train_batch_size`: batch size on one GPU
+- `per_device_train_batch_size`: batch size on one GPU.
     - default: 16
-- `gradient_accumulation_steps`: make sure that per_device_train_batch_size\*num_processes\*gradient_accumulation_steps equals to your true batch size.
-- `num_train_epochs`: the training epochs of this iteration
+- `gradient_accumulation_steps`: make sure that the product per_device_train_batch_size\*num_processes\*gradient_accumulation_steps equals to your true batch size.
+- `num_train_epochs`: the training epochs of this iteration.
     - default: 3
-- `beta`: beta in SPIN
+- `beta`: beta in SPIN.
     - default: 0.1
 
 
