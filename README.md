@@ -192,6 +192,7 @@ You might need to change the configuration in `configs/config.yaml`. Here are so
 - `beta`: beta in SPIN.
     - default: 0.1
 
+In our experiments, we do full fine-tuning on a multi-GPU machine with DeepSpeed ZeRO-3 (requires A100 (80GB)).
 
 #### Examples
 ```
