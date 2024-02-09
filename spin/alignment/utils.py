@@ -132,8 +132,8 @@ class DataCollatorWithPadding:
             )
 
             for k, toks in {
-                "chosen": chosen_sequence_tokens,
-                "rejected": rejected_sequence_tokens,
+                "real": chosen_sequence_tokens,
+                "generated": rejected_sequence_tokens,
                 "prompt": prompt_tokens,
             }.items():
                 for type_key, tokens in toks.items():
@@ -166,8 +166,8 @@ class DataCollatorWithPadding:
                 )
 
         batch["prompt"] = prompt
-        batch["chosen"] = prompt + chosen
-        batch["rejected"] = prompt + rejected
+        batch["real"] = prompt + chosen
+        batch["generated"] = prompt + rejected
         batch["chosen_response_only"] = chosen
         batch["rejected_response_only"] = rejected
 
@@ -185,7 +185,7 @@ class DataCollatorWithPadding:
                         padding_value = self.tokenizer.pad_token_id
                     elif k.endswith("_attention_mask"):
                         padding_value = 0
-                    elif (k.startswith("chosen")) or (k.startswith("rejected")) or ("decoder" in k):
+                    elif (k.startswith("real")) or (k.startswith("generated")) or ("decoder" in k):
                         padding_value = self.label_pad_token_id
                     else:
                         raise ValueError(f"Unexpected key in batch '{k}'")
@@ -219,8 +219,8 @@ class DataCollatorWithPadding:
 
         for feature in features:
             prompt = feature["prompt"]
-            chosen = feature["chosen"]
-            rejected = feature["rejected"]
+            chosen = feature["real"]
+            rejected = feature["generated"]
 
             batch_element = self.tokenize_batch_element(prompt, chosen, rejected)
             tokenized_batch.append(batch_element)

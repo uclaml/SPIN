@@ -71,9 +71,9 @@ def main():
     if args.frac_len > 0:
         sub_len = args.frac_len 
         if sub_len*(data_frac+1) > len(data):
-            data = data[sub_len*data_frac:]['chosen']
+            data = data[sub_len*data_frac:]['real']
         else:
-            data = data[sub_len*data_frac:sub_len*(data_frac+1)]['chosen']
+            data = data[sub_len*data_frac:sub_len*(data_frac+1)]['real']
 
     prompts_all = ["### Instruction: " + data[idx][0]['content'] + "\n\n### Response: " for idx in range(len(data))]
     prompts_old = [data[idx][0]['content'] for idx in range(len(data))]
@@ -109,7 +109,7 @@ def main():
 
         # collecting data
         for idx in range(len(corrects_all)):
-            d = {"chosen": [{"role": "user", "content": prompts_old[idx]}, {"role": "assistant", "content": corrects_all[idx]}], "rejected": [{"role": "user", "content": prompts_old[idx]}, {"role": "assistant", "content": results[idx]}]}
+            d = {"real": [{"role": "user", "content": prompts_old[idx]}, {"role": "assistant", "content": corrects_all[idx]}], "generated": [{"role": "user", "content": prompts_old[idx]}, {"role": "assistant", "content": results[idx]}]}
             if args.split == 'test':
                 filename = f"{args.output_dir}/loser_{data_frac}_test.jsonl"
             else:

@@ -27,9 +27,9 @@ def apply_chat_template(
     #         messages, tokenize=False, add_generation_prompt=True if task == "generation" else False
     #     )
     # elif task == "rm":
-    #     if all(k in example.keys() for k in ("chosen", "rejected")):
-    #         chosen_messages = example["chosen"]
-    #         rejected_messages = example["rejected"]
+    #     if all(k in example.keys() for k in ("real", "generated")):
+    #         chosen_messages = example["real"]
+    #         rejected_messages = example["generated"]
     #         # We add an empty system message if there is none
     #         if chosen_messages[0]["role"] != "system":
     #             chosen_messages.insert(0, {"role": "system", "content": ""})
@@ -42,17 +42,17 @@ def apply_chat_template(
     #             f"Could not format example as dialogue for `rm` task! Require `[chosen, rejected]` keys but found {list(example.keys())}"
     #         )
     # elif task == "spin":
-    if all(k in example.keys() for k in ("chosen", "rejected")):
+    if all(k in example.keys() for k in ("real", "generated")):
         # Compared to reward modeling, we filter out the prompt, so the text is everything after the last assistant token
-        prompt_messages = [[msg for msg in example["chosen"] if msg["role"] == "user"][0]]
+        prompt_messages = [[msg for msg in example["real"] if msg["role"] == "user"][0]]
         # Insert system message
-        if example["chosen"][0]["role"] != "system":
+        if example["real"][0]["role"] != "system":
             prompt_messages.insert(0, {"role": "system", "content": ""})
         else:
-            prompt_messages.insert(0, example["chosen"][0])
+            prompt_messages.insert(0, example["real"][0])
         # TODO: handle case where chosen/rejected also have system messages
-        chosen_messages = example["chosen"][1:]
-        rejected_messages = example["rejected"][1:]
+        chosen_messages = example["real"][1:]
+        rejected_messages = example["generated"][1:]
         example["text_chosen"] = tokenizer.apply_chat_template(chosen_messages, tokenize=False)
         example["text_rejected"] = tokenizer.apply_chat_template(rejected_messages, tokenize=False)
         example["text_prompt"] = tokenizer.apply_chat_template(

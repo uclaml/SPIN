@@ -90,7 +90,7 @@ def main():
     # Replace column names with what TRL needs, text_chosen -> chosen and text_rejected -> rejected
     for split in ["train", "test"]:
         raw_datasets[split] = raw_datasets[split].rename_columns(
-            {"text_prompt": "prompt", "text_chosen": "chosen", "text_rejected": "rejected"}
+            {"text_prompt": "prompt", "text_chosen": "real", "text_rejected": "generated"}
         )
 
     torch_dtype = (

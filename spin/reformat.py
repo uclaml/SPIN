@@ -19,8 +19,8 @@ def load_and_process_data_ultrachat(dataset_name, split):
     try:
         dataset = load_dataset(dataset_name, split=split)
         reformatted_data = [{
-            'rejected': [message['messages'][0], {"role": "assistant", "content": ""}], 
-            'chosen': [message['messages'][0], message['messages'][1]]
+            'generated': [message['messages'][0], {"role": "assistant", "content": ""}], 
+            'real': [message['messages'][0], message['messages'][1]]
         } for message in dataset]
         return reformatted_data
     except Exception as e:
@@ -32,8 +32,8 @@ def load_and_process_data_metamath(dataset_name, split):
     try:
         dataset = load_dataset(dataset_name, split=split)
         reformatted_data = [{
-            'rejected': [{"role": "user", "content": message['query']}, {"role": "assistant", "content": ""}], 
-            'chosen': [{"role": "user", "content": message['query']}, {"role": "assistant", "content": message['response']}]
+            'generated': [{"role": "user", "content": message['query']}, {"role": "assistant", "content": ""}], 
+            'real': [{"role": "user", "content": message['query']}, {"role": "assistant", "content": message['response']}]
         } for message in dataset]
         return reformatted_data
     except Exception as e:

@@ -26,7 +26,7 @@ for i in range(num_fracs):
 
     for json_str in json_list:
         result = json.loads(json_str)
-        result['rejected'][1]['content'] = result['rejected'][1]['content'].lstrip()
+        result['generated'][1]['content'] = result['generated'][1]['content'].lstrip()
         data.append(result)
 
 print(len(data))
@@ -38,7 +38,7 @@ with open(f'{input_dir}/loser_0_test.jsonl', 'r') as f:
 
 for json_str in json_list:
     result = json.loads(json_str)
-    result['rejected'][1]['content'] = result['rejected'][1]['content'].lstrip()
+    result['generated'][1]['content'] = result['generated'][1]['content'].lstrip()
     test_data.append(result)
 
 with open(f'{input_dir}/synthetic_train.json', 'w') as f:

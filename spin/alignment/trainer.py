@@ -378,14 +378,14 @@ class SPINTrainer(Trainer):
             max_length = max(batch["chosen_input_ids"].shape[1], batch["rejected_input_ids"].shape[1])
 
         for k in batch:
-            if k.startswith("chosen") and isinstance(batch[k], torch.Tensor):
+            if k.startswith("real") and isinstance(batch[k], torch.Tensor):
                 pad_value = self.label_pad_token_id if "labels" in k or self.is_encoder_decoder else self.padding_value
-                concatenated_key = k.replace("chosen", "concatenated")
+                concatenated_key = k.replace("real", "concatenated")
                 concatenated_batch[concatenated_key] = pad_to_length(batch[k], max_length, pad_value=pad_value)
         for k in batch:
-            if k.startswith("rejected") and isinstance(batch[k], torch.Tensor):
+            if k.startswith("generated") and isinstance(batch[k], torch.Tensor):
                 pad_value = self.label_pad_token_id if "labels" in k or self.is_encoder_decoder else self.padding_value
-                concatenated_key = k.replace("rejected", "concatenated")
+                concatenated_key = k.replace("generated", "concatenated")
                 concatenated_batch[concatenated_key] = torch.cat(
                     (
                         concatenated_batch[concatenated_key],

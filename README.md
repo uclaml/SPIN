@@ -77,9 +77,9 @@ We provide the data used in our experiments along with the synthetic data we gen
 The input data for our code is required to be of the same format where each data contains the following attributes, as similar to [HuggingFaceH4/ultrafeedback_binarized](https://huggingface.co/datasets/HuggingFaceH4/ultrafeedback_binarized):
 ```
 {
-    "chosen": [{"role": "user", "content": <prompt>}, 
+    "real": [{"role": "user", "content": <prompt>}, 
                {"role": "assistant", "content": <ground truth>}],
-    "rejected": [{"role": "user", "content": <prompt>}, 
+    "generated": [{"role": "user", "content": <prompt>}, 
                  {"role": "assistant", "content": <generation>}]
 }
 ```
@@ -133,9 +133,9 @@ Options
 The generated data is in json format where each data contains the following attributes:
 ```
 {
-    "chosen": [{"role": "user", "content": <prompt>}, 
+    "real": [{"role": "user", "content": <prompt>}, 
                {"role": "assistant", "content": <ground truth>}],
-    "rejected": [{"role": "user", "content": <prompt>}, 
+    "generated": [{"role": "user", "content": <prompt>}, 
                  {"role": "assistant", "content": <generation>}]
 }
 ```
