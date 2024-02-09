@@ -362,10 +362,10 @@ class SPINTrainer(Trainer):
         return model
 
     def concatenated_inputs(self, batch: Dict[str, Union[List, torch.LongTensor]]) -> Dict[str, torch.LongTensor]:
-        """Concatenate the chosen and rejected inputs into a single tensor.
+        """Concatenate the real and generated inputs into a single tensor.
 
         Args:
-            batch: A batch of data. Must contain the keys 'chosen_input_ids' and 'rejected_input_ids', which are tensors of shape (batch_size, sequence_length).
+            batch: A batch of data. Must contain the keys 'åchosen_input_ids' and 'rejected_input_ids', which are tensors of shape (batch_size, sequence_length).
 
         Returns:
             A dictionary containing the concatenated inputs under the key 'concatenated_input_ids'.
@@ -402,29 +402,29 @@ class SPINTrainer(Trainer):
 
     def spin_loss(
         self,
-        policy_chosen_logps: torch.FloatTensor,
-        policy_rejected_logps: torch.FloatTensor,
-        reference_chosen_logps: torch.FloatTensor,
-        reference_rejected_logps: torch.FloatTensor,
+        policy_real_logps: torch.FloatTensor,
+        policy_generated_logps: torch.FloatTensor,
+        opponent_real_logps: torch.FloatTensor,
+        opponent_generated_logps: torch.FloatTensor,
         reference_free: bool = False,
     ) -> Tuple[torch.FloatTensor, torch.FloatTensor, torch.FloatTensor]:
         """Compute the SPIN loss for a batch of policy and reference model log probabilities.
 
         Args:
-            policy_chosen_logps: Log probabilities of the policy model for the chosen responses. Shape: (batch_size,)
-            policy_rejected_logps: Log probabilities of the policy model for the rejected responses. Shape: (batch_size,)
-            reference_chosen_logps: Log probabilities of the reference model for the chosen responses. Shape: (batch_size,)
-            reference_rejected_logps: Log probabilities of the reference model for the rejected responses. Shape: (batch_size,)
+            policy_real_logps: Log probabilities of the policy model for the real responses. Shape: (batch_size,)
+            policy_generated_logps: Log probabilities of the policy model for the generated responses. Shape: (batch_size,)
+            opponent_real_logps: Log probabilities of the reference model for the real responses. Shape: (batch_size,)
+            opponent_generated_logps: Log probabilities of the reference model for the generated responses. Shape: (batch_size,)
             beta: Temperature parameter for the SPIN loss, typically something in the range of 0.1 to 0.5. We ignore the reference model as beta -> 0.
             reference_free: If True, we ignore the _provided_ reference model and implicitly use a reference model that assigns equal probability to all responses.
 
         Returns:
-            A tuple of three tensors: (losses, chosen_rewards, rejected_rewards).
+            A tuple of three tensors: (losses, real_rewards, generated_rewards).
             The losses tensor contains the SPIN loss for each example in the batch.
-            The chosen_rewards and rejected_rewards tensors contain the rewards for the chosen and rejected responses, respectively.
+            The real_rewards and generated_rewards tensors contain the rewards for the real and generated responses, respectively.
         """
-        pi_logratios = policy_chosen_logps - policy_rejected_logps
-        ref_logratios = reference_chosen_logps - reference_rejected_logps
+        pi_logratios = policy_real_logps - policy_generated_logps
+        ref_logratios = opponent_real_logps - opponent_generated_logps
 
         if reference_free:
             ref_logratios = 0
@@ -438,10 +438,10 @@ class SPINTrainer(Trainer):
         else:
             raise ValueError(f"Unknown loss type: {self.loss_type}. Should be one of ['sigmoid', 'hinge']")
 
-        chosen_rewards = self.beta * (policy_chosen_logps - reference_chosen_logps).detach()
-        rejected_rewards = self.beta * (policy_rejected_logps - reference_rejected_logps).detach()
+        real_rewards = self.beta * (policy_real_logps - opponent_real_logps).detach()
+        generated_rewards = self.beta * (policy_generated_logps - opponent_generated_logps).detach()
 
-        return losses, chosen_rewards, rejected_rewards
+        return losses, real_rewards, generated_rewards
 
     def _get_batch_logps(
         self,
@@ -480,12 +480,12 @@ class SPINTrainer(Trainer):
     def concatenated_forward(
         self, model: nn.Module, batch: Dict[str, Union[List, torch.LongTensor]]
     ) -> Tuple[torch.FloatTensor, torch.FloatTensor, torch.FloatTensor, torch.FloatTensor]:
-        """Run the given model on the given batch of inputs, concatenating the chosen and rejected inputs together.
+        """Run the given model on the given batch of inputs, concatenating the real and generated inputs together.
 
         We do this to avoid doing two forward passes, because it's faster for FSDP.
         """
         concatenated_batch = self.concatenated_inputs(batch)
-        len_chosen = batch["chosen_labels"].shape[0]
+        len_real = batch["chosen_labels"].shape[0]
 
         model_kwargs = (
             {
@@ -507,13 +507,13 @@ class SPINTrainer(Trainer):
             average_log_prob=False,
         )
 
-        chosen_logps = all_logps[:len_chosen]
-        rejected_logps = all_logps[len_chosen:]
+        real_logps = all_logps[:len_real]
+        generated_logps = all_logps[len_real:]
 
-        chosen_logits = all_logits[:len_chosen]
-        rejected_logits = all_logits[len_chosen:]
+        real_logits = all_logits[:len_real]
+        generated_logits = all_logits[len_real:]
 
-        return (chosen_logps, rejected_logps, chosen_logits, rejected_logits)
+        return (real_logps, generated_logps, real_logits, generated_logits)
 
     def get_batch_metrics(
         self,
@@ -525,45 +525,45 @@ class SPINTrainer(Trainer):
         metrics = {}
 
         (
-            policy_chosen_logps,
-            policy_rejected_logps,
-            policy_chosen_logits,
-            policy_rejected_logits,
+            policy_real_logps,
+            policy_generated_logps,
+            policy_real_logits,
+            policy_generated_logits,
         ) = self.concatenated_forward(model, batch)
         with torch.no_grad():
             if self.ref_model is None:
                 with self.accelerator.unwrap_model(self.model).disable_adapter():
                     (
-                        reference_chosen_logps,
-                        reference_rejected_logps,
+                        opponent_real_logps,
+                        opponent_generated_logps,
                         _,
                         _,
                     ) = self.concatenated_forward(self.model, batch)
             else:
                 (
-                    reference_chosen_logps,
-                    reference_rejected_logps,
+                    opponent_real_logps,
+                    opponent_generated_logps,
                     _,
                     _,
                 ) = self.concatenated_forward(self.ref_model, batch)
 
-        losses, chosen_rewards, rejected_rewards = self.spin_loss(
-            policy_chosen_logps,
-            policy_rejected_logps,
-            reference_chosen_logps,
-            reference_rejected_logps,
+        losses, real_rewards, generated_rewards = self.spin_loss(
+            policy_real_logps,
+            policy_generated_logps,
+            opponent_real_logps,
+            opponent_generated_logps,
         )
-        reward_accuracies = (chosen_rewards > rejected_rewards).float()
+        reward_accuracies = (real_rewards > generated_rewards).float()
 
         prefix = "eval_" if train_eval == "eval" else ""
-        metrics[f"{prefix}rewards/chosen"] = chosen_rewards.cpu().mean()
-        metrics[f"{prefix}rewards/rejected"] = rejected_rewards.cpu().mean()
+        metrics[f"{prefix}rewards/real"] = real_rewards.cpu().mean()
+        metrics[f"{prefix}rewards/generated"] = generated_rewards.cpu().mean()
         metrics[f"{prefix}rewards/accuracies"] = reward_accuracies.cpu().mean()
-        metrics[f"{prefix}rewards/margins"] = (chosen_rewards - rejected_rewards).cpu().mean()
-        metrics[f"{prefix}logps/rejected"] = policy_rejected_logps.detach().cpu().mean()
-        metrics[f"{prefix}logps/chosen"] = policy_chosen_logps.detach().cpu().mean()
-        metrics[f"{prefix}logits/rejected"] = policy_rejected_logits.detach().cpu().mean()
-        metrics[f"{prefix}logits/chosen"] = policy_chosen_logits.detach().cpu().mean()
+        metrics[f"{prefix}rewards/margins"] = (real_rewards - generated_rewards).cpu().mean()
+        metrics[f"{prefix}logps/generated"] = policy_generated_logps.detach().cpu().mean()
+        metrics[f"{prefix}logps/real"] = policy_real_logps.detach().cpu().mean()
+        metrics[f"{prefix}logits/generated"] = policy_generated_logits.detach().cpu().mean()
+        metrics[f"{prefix}logits/real"] = policy_real_logits.detach().cpu().mean()
 
         return losses.mean(), metrics
 
@@ -653,10 +653,10 @@ class SPINTrainer(Trainer):
         if prediction_loss_only:
             return (loss.detach(), None, None)
 
-        # logits for the chosen and rejected samples from model
+        # logits for the real and generated samples from model
         logits_dict = {
-            "eval_logits/chosen": metrics["eval_logits/chosen"],
-            "eval_logits/rejected": metrics["eval_logits/rejected"],
+            "eval_logits/real": metrics["eval_logits/real"],
+            "eval_logits/generated": metrics["eval_logits/generated"],
         }
         logits = tuple(v.unsqueeze(dim=0) for k, v in logits_dict.items() if k not in ignore_keys)
         logits = torch.stack(logits).mean(axis=1).to(self.accelerator.device)

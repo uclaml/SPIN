@@ -21,7 +21,7 @@ if not os.path.exists(output_dir):
 
 data = []
 for i in range(num_fracs):
-    with open(f'data/{input_dir}/loser_{i}.jsonl', 'r') as f:
+    with open(f'{input_dir}/loser_{i}.jsonl', 'r') as f:
         json_list = list(f)
 
     for json_str in json_list:
@@ -32,7 +32,7 @@ for i in range(num_fracs):
 print(len(data))
 test_data = []
 
-with open(f'data/{input_dir}/loser_0_test.jsonl', 'r') as f:
+with open(f'{input_dir}/loser_0_test.jsonl', 'r') as f:
     json_list = list(f)
     print(len(json_list))
 
@@ -41,13 +41,13 @@ for json_str in json_list:
     result['rejected'][1]['content'] = result['rejected'][1]['content'].lstrip()
     test_data.append(result)
 
-with open('generated/iter0/synthetic_train.json', 'w') as f:
+with open(f'{input_dir}/synthetic_train.json', 'w') as f:
     json.dump(data, f, indent=4)
-with open('generated/iter0/synthetic_test.json', 'w') as f:
+with open(f'{input_dir}/synthetic_test.json', 'w') as f:
     json.dump(test_data, f, indent=4)
 
-dataset = load_dataset('json', data_files='generated/iter0/synthetic_train.json',split='train')
-dataset_test = load_dataset('json', data_files='generated/iter0/synthetic_test.json',split='train')
+dataset = load_dataset('json', data_files=f'{input_dir}/synthetic_train.json',split='train')
+dataset_test = load_dataset('json', data_files=f'{input_dir}/synthetic_test.json',split='train')
 
 print(len(dataset))
 print(len(dataset_test))
