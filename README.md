@@ -13,6 +13,9 @@ This repository contains the official code for the paper "[Self-Play Fine-Tuning
 
 Authors: [Zixiang Chen](https://sites.google.com/view/zxchen)\*, [Yihe Deng](https://sites.google.com/g.ucla.edu/yihedeng/)\*, [Huizhuo Yuan](https://scholar.google.com/citations?user=8foZzX4AAAAJ)\*, [Kaixuan Ji](https://scholar.google.com/citations?user=FOoKDukAAAAJ), [Quanquan Gu](https://web.cs.ucla.edu/~qgu/)
 
+[[Webpage](https://uclaml.github.io/SPIN/)] [[Huggingface](https://huggingface.co/papers/2401.01335)] 
+
+
 ## 🔔 News 
 - **[01/02/2024]** Our paper is released on arXiv: https://arxiv.org/abs/2401.01335.
 
