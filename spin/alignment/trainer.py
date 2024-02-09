@@ -281,9 +281,9 @@ class SPINTrainer(Trainer):
                     UserWarning,
                 )
 
-            self.use_dpo_data_collator = True
+            self.use_data_collator = True
         else:
-            self.use_dpo_data_collator = False
+            self.use_data_collator = False
 
         if disable_dropout:
             disable_dropout_in_model(model)
@@ -400,7 +400,7 @@ class SPINTrainer(Trainer):
 
         return concatenated_batch
 
-    def dpo_loss(
+    def spin_loss(
         self,
         policy_chosen_logps: torch.FloatTensor,
         policy_rejected_logps: torch.FloatTensor,
@@ -547,7 +547,7 @@ class SPINTrainer(Trainer):
                     _,
                 ) = self.concatenated_forward(self.ref_model, batch)
 
-        losses, chosen_rewards, rejected_rewards = self.dpo_loss(
+        losses, chosen_rewards, rejected_rewards = self.spin_loss(
             policy_chosen_logps,
             policy_rejected_logps,
             reference_chosen_logps,
@@ -573,7 +573,7 @@ class SPINTrainer(Trainer):
         inputs: Dict[str, Union[torch.Tensor, Any]],
         return_outputs=False,
     ) -> Union[torch.Tensor, Tuple[torch.Tensor, Dict[str, torch.Tensor]]]:
-        if not self.use_dpo_data_collator:
+        if not self.use_data_collator:
             warnings.warn(
                 "compute_loss is only implemented for SPINDataCollatorWithPadding, and you passed a datacollator that is different than "
                 "SPINDataCollatorWithPadding - you might see unexpected behavior. Alternatively, you can implement your own prediction_step method if you are using a custom data collator"
@@ -632,7 +632,7 @@ class SPINTrainer(Trainer):
         prediction_loss_only: bool,
         ignore_keys: Optional[List[str]] = None,
     ):
-        if not self.use_dpo_data_collator:
+        if not self.use_data_collator:
             warnings.warn(
                 "prediction_step is only implemented for SPINDataCollatorWithPadding, and you passed a datacollator that is different than "
                 "SPINDataCollatorWithPadding - you might see unexpected behavior. Alternatively, you can implement your own prediction_step method if you are using a custom data collator"
