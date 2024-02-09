@@ -163,3 +163,4 @@ cython_debug/
 generated/
 wandb/
 reformatted/
+data/

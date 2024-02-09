@@ -1,17 +1,3 @@
-# coding=utf-8
-# Copyright 2023 The HuggingFace Team. All rights reserved.
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
 import os
 import re
 from typing import List, Literal, Optional
@@ -26,62 +12,58 @@ DEFAULT_CHAT_TEMPLATE = "{% for message in messages %}\n{% if message['role'] ==
 
 
 def apply_chat_template(
-    example, tokenizer, task: Literal["sft", "generation", "rm", "dpo"] = "sft", assistant_prefix="<|assistant|>\n"
+    example, tokenizer, assistant_prefix="<|assistant|>\n"
 ):
     def _strip_prefix(s, pattern):
         # Use re.escape to escape any special characters in the pattern
         return re.sub(f"^{re.escape(pattern)}", "", s)
 
-    if task in ["sft", "generation"]:
-        messages = example["messages"]
-        # We add an empty system message if there is none
-        if messages[0]["role"] != "system":
-            messages.insert(0, {"role": "system", "content": ""})
-        example["text"] = tokenizer.apply_chat_template(
-            messages, tokenize=False, add_generation_prompt=True if task == "generation" else False
+    # if task in ["sft", "generation"]:
+    #     messages = example["messages"]
+    #     # We add an empty system message if there is none
+    #     if messages[0]["role"] != "system":
+    #         messages.insert(0, {"role": "system", "content": ""})
+    #     example["text"] = tokenizer.apply_chat_template(
+    #         messages, tokenize=False, add_generation_prompt=True if task == "generation" else False
+    #     )
+    # elif task == "rm":
+    #     if all(k in example.keys() for k in ("chosen", "rejected")):
+    #         chosen_messages = example["chosen"]
+    #         rejected_messages = example["rejected"]
+    #         # We add an empty system message if there is none
+    #         if chosen_messages[0]["role"] != "system":
+    #             chosen_messages.insert(0, {"role": "system", "content": ""})
+    #         if rejected_messages[0]["role"] != "system":
+    #             rejected_messages.insert(0, {"role": "system", "content": ""})
+    #         example["text_chosen"] = tokenizer.apply_chat_template(chosen_messages, tokenize=False)
+    #         example["text_rejected"] = tokenizer.apply_chat_template(rejected_messages, tokenize=False)
+    #     else:
+    #         raise ValueError(
+    #             f"Could not format example as dialogue for `rm` task! Require `[chosen, rejected]` keys but found {list(example.keys())}"
+    #         )
+    # elif task == "spin":
+    if all(k in example.keys() for k in ("chosen", "rejected")):
+        # Compared to reward modeling, we filter out the prompt, so the text is everything after the last assistant token
+        prompt_messages = [[msg for msg in example["chosen"] if msg["role"] == "user"][0]]
+        # Insert system message
+        if example["chosen"][0]["role"] != "system":
+            prompt_messages.insert(0, {"role": "system", "content": ""})
+        else:
+            prompt_messages.insert(0, example["chosen"][0])
+        # TODO: handle case where chosen/rejected also have system messages
+        chosen_messages = example["chosen"][1:]
+        rejected_messages = example["rejected"][1:]
+        example["text_chosen"] = tokenizer.apply_chat_template(chosen_messages, tokenize=False)
+        example["text_rejected"] = tokenizer.apply_chat_template(rejected_messages, tokenize=False)
+        example["text_prompt"] = tokenizer.apply_chat_template(
+            prompt_messages, tokenize=False, add_generation_prompt=True
         )
-    elif task == "rm":
-        if all(k in example.keys() for k in ("chosen", "rejected")):
-            chosen_messages = example["chosen"]
-            rejected_messages = example["rejected"]
-            # We add an empty system message if there is none
-            if chosen_messages[0]["role"] != "system":
-                chosen_messages.insert(0, {"role": "system", "content": ""})
-            if rejected_messages[0]["role"] != "system":
-                rejected_messages.insert(0, {"role": "system", "content": ""})
-            example["text_chosen"] = tokenizer.apply_chat_template(chosen_messages, tokenize=False)
-            example["text_rejected"] = tokenizer.apply_chat_template(rejected_messages, tokenize=False)
-        else:
-            raise ValueError(
-                f"Could not format example as dialogue for `rm` task! Require `[chosen, rejected]` keys but found {list(example.keys())}"
-            )
-    elif task == "spin":
-        if all(k in example.keys() for k in ("chosen", "rejected")):
-            # Compared to reward modeling, we filter out the prompt, so the text is everything after the last assistant token
-            prompt_messages = [[msg for msg in example["chosen"] if msg["role"] == "user"][0]]
-            # Insert system message
-            if example["chosen"][0]["role"] != "system":
-                prompt_messages.insert(0, {"role": "system", "content": ""})
-            else:
-                prompt_messages.insert(0, example["chosen"][0])
-            # TODO: handle case where chosen/rejected also have system messages
-            chosen_messages = example["chosen"][1:]
-            rejected_messages = example["rejected"][1:]
-            example["text_chosen"] = tokenizer.apply_chat_template(chosen_messages, tokenize=False)
-            example["text_rejected"] = tokenizer.apply_chat_template(rejected_messages, tokenize=False)
-            example["text_prompt"] = tokenizer.apply_chat_template(
-                prompt_messages, tokenize=False, add_generation_prompt=True
-            )
-            example["text_chosen"] = _strip_prefix(example["text_chosen"], assistant_prefix)
-            example["text_rejected"] = _strip_prefix(example["text_rejected"], assistant_prefix)
-        else:
-            raise ValueError(
-                f"Could not format example as dialogue for `dpo` task! Require `[chosen, rejected]` keys but found {list(example.keys())}"
-            )
+        example["text_chosen"] = _strip_prefix(example["text_chosen"], assistant_prefix)
+        example["text_rejected"] = _strip_prefix(example["text_rejected"], assistant_prefix)
     else:
         raise ValueError(
-            f"Task {task} not supported, please ensure that the provided task is one of {['sft', 'generation', 'rm', 'dpo']}"
-        )
+            f"Require `[chosen, rejected]` keys but found {list(example.keys())}"
+            )
     return example
 
 
