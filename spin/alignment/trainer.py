@@ -51,10 +51,12 @@ class SPINTrainer(Trainer):
             reference model is provided, the trainer will create a reference model with the same architecture as the model to be optimized.
         beta (`float`, defaults to 0.1):
             The beta factor in SPIN loss. Higher beta means less divergence from the initial policy.
+        loss_type (`str`, defaults to `"sigmoid"`):
+            The type of SPIN loss to use. Either `"sigmoid"` the default SPIN loss or `"hinge"` loss from SLiC paper.
         args (`transformers.TrainingArguments`):
             The arguments to use for training.
         data_collator (`transformers.DataCollator`):
-            The data collator to use for training. If None is specified, the default data collator (`DataCollatorWithPadding`) will be used
+            The data collator to use for training. If None is specified, the default data collator (`SPINDataCollatorWithPadding`) will be used
             which will pad the sequences to the maximum length of the sequences in the batch, given a dataset of paired sequences.
         label_pad_token_id (`int`, defaults to `-100`):
             The label pad token id. This argument is required if you want to use the default data collator.
@@ -105,7 +107,7 @@ class SPINTrainer(Trainer):
         model: Union[PreTrainedModel, nn.Module, str] = None,
         ref_model: Optional[Union[PreTrainedModel, nn.Module, str]] = None,
         beta: float = 0.1,
-        # loss_type: Literal["sigmoid", "hinge"] = "sigmoid",
+        loss_type: Literal["sigmoid", "hinge"] = "sigmoid",
         args: TrainingArguments = None,
         data_collator: Optional[DataCollator] = None,
         label_pad_token_id: int = -100,
@@ -234,18 +236,18 @@ class SPINTrainer(Trainer):
         if data_collator is None:
             if tokenizer is None:
                 raise ValueError(
-                    "max_length or a tokenizer must be specified when using the default DataCollatorWithPadding"
+                    "max_length or a tokenizer must be specified when using the default SPINDataCollatorWithPadding"
                 )
             if max_length is None:
                 warnings.warn(
-                    "When using DataCollatorWithPadding, you should set `max_length` in the SPINTrainer's init"
+                    "When using SPINDataCollatorWithPadding, you should set `max_length` in the SPINTrainer's init"
                     " it will be set to `512` by default, but you should do it yourself in the future.",
                     UserWarning,
                 )
                 max_length = 512
             if max_prompt_length is None:
                 warnings.warn(
-                    "When using DataCollatorWithPadding, you should set `max_prompt_length` in the SPINTrainer's init"
+                    "When using SPINDataCollatorWithPadding, you should set `max_prompt_length` in the SPINTrainer's init"
                     " it will be set to `128` by default, but you should do it yourself in the future.",
                     UserWarning,
                 )
@@ -253,7 +255,7 @@ class SPINTrainer(Trainer):
 
             if max_target_length is None and self.is_encoder_decoder:
                 warnings.warn(
-                    "When using DataCollatorWithPadding with an encoder decoder architecture, you should set `max_target_length` in the SPINTrainer's init"
+                    "When using SPINDataCollatorWithPadding with an encoder decoder architecture, you should set `max_target_length` in the SPINTrainer's init"
                     " it will be set to `128` by default, but you should do it yourself in the future.",
                     UserWarning,
                 )
@@ -274,14 +276,14 @@ class SPINTrainer(Trainer):
                 args.remove_unused_columns = False
                 # warn users
                 warnings.warn(
-                    "When using DataCollatorWithPadding, you should set `remove_unused_columns=False` in your TrainingArguments"
+                    "When using SPINDataCollatorWithPadding, you should set `remove_unused_columns=False` in your TrainingArguments"
                     " we have set it for you, but you should do it yourself in the future.",
                     UserWarning,
                 )
 
-            self.use_data_collator = True
+            self.use_dpo_data_collator = True
         else:
-            self.use_data_collator = False
+            self.use_dpo_data_collator = False
 
         if disable_dropout:
             disable_dropout_in_model(model)
@@ -294,7 +296,7 @@ class SPINTrainer(Trainer):
         self.padding_value = padding_value
 
         self.beta = beta
-        # self.loss_type = loss_type
+        self.loss_type = loss_type
 
         self._stored_metrics = defaultdict(lambda: defaultdict(list))
 
@@ -360,6 +362,14 @@ class SPINTrainer(Trainer):
         return model
 
     def concatenated_inputs(self, batch: Dict[str, Union[List, torch.LongTensor]]) -> Dict[str, torch.LongTensor]:
+        """Concatenate the chosen and rejected inputs into a single tensor.
+
+        Args:
+            batch: A batch of data. Must contain the keys 'chosen_input_ids' and 'rejected_input_ids', which are tensors of shape (batch_size, sequence_length).
+
+        Returns:
+            A dictionary containing the concatenated inputs under the key 'concatenated_input_ids'.
+        """
         concatenated_batch = {}
 
         if self.is_encoder_decoder:
@@ -390,14 +400,67 @@ class SPINTrainer(Trainer):
 
         return concatenated_batch
 
+    def dpo_loss(
+        self,
+        policy_chosen_logps: torch.FloatTensor,
+        policy_rejected_logps: torch.FloatTensor,
+        reference_chosen_logps: torch.FloatTensor,
+        reference_rejected_logps: torch.FloatTensor,
+        reference_free: bool = False,
+    ) -> Tuple[torch.FloatTensor, torch.FloatTensor, torch.FloatTensor]:
+        """Compute the SPIN loss for a batch of policy and reference model log probabilities.
+
+        Args:
+            policy_chosen_logps: Log probabilities of the policy model for the chosen responses. Shape: (batch_size,)
+            policy_rejected_logps: Log probabilities of the policy model for the rejected responses. Shape: (batch_size,)
+            reference_chosen_logps: Log probabilities of the reference model for the chosen responses. Shape: (batch_size,)
+            reference_rejected_logps: Log probabilities of the reference model for the rejected responses. Shape: (batch_size,)
+            beta: Temperature parameter for the SPIN loss, typically something in the range of 0.1 to 0.5. We ignore the reference model as beta -> 0.
+            reference_free: If True, we ignore the _provided_ reference model and implicitly use a reference model that assigns equal probability to all responses.
+
+        Returns:
+            A tuple of three tensors: (losses, chosen_rewards, rejected_rewards).
+            The losses tensor contains the SPIN loss for each example in the batch.
+            The chosen_rewards and rejected_rewards tensors contain the rewards for the chosen and rejected responses, respectively.
+        """
+        pi_logratios = policy_chosen_logps - policy_rejected_logps
+        ref_logratios = reference_chosen_logps - reference_rejected_logps
+
+        if reference_free:
+            ref_logratios = 0
+
+        logits = pi_logratios - ref_logratios
+
+        if self.loss_type == "sigmoid":
+            losses = -F.logsigmoid(self.beta * logits)
+        elif self.loss_type == "hinge":
+            losses = torch.relu(1 - self.beta * logits)
+        else:
+            raise ValueError(f"Unknown loss type: {self.loss_type}. Should be one of ['sigmoid', 'hinge']")
+
+        chosen_rewards = self.beta * (policy_chosen_logps - reference_chosen_logps).detach()
+        rejected_rewards = self.beta * (policy_rejected_logps - reference_rejected_logps).detach()
+
+        return losses, chosen_rewards, rejected_rewards
+
     def _get_batch_logps(
         self,
         logits: torch.FloatTensor,
         labels: torch.LongTensor,
         average_log_prob: bool = False,
     ) -> torch.FloatTensor:
-        # if logits.shape[:-1] != labels.shape:
-        #     raise ValueError("Logits (batch and sequence length dim) and labels must have the same shape.")
+        """Compute the log probabilities of the given labels under the given logits.
+
+        Args:
+            logits: Logits of the model (unnormalized). Shape: (batch_size, sequence_length, vocab_size)
+            labels: Labels for which to compute the log probabilities. Label tokens with a value of label_pad_token_id are ignored. Shape: (batch_size, sequence_length)
+            average_log_prob: If True, return the average log probability per (non-masked) token. Otherwise, return the sum of the log probabilities of the (non-masked) tokens.
+
+        Returns:
+            A tensor of shape (batch_size,) containing the average/sum log probabilities of the given labels under the given logits.
+        """
+        if logits.shape[:-1] != labels.shape:
+            raise ValueError("Logits (batch and sequence length dim) and labels must have the same shape.")
 
         if not self.is_encoder_decoder:
             labels = labels[:, 1:].clone()
@@ -424,10 +487,18 @@ class SPINTrainer(Trainer):
         concatenated_batch = self.concatenated_inputs(batch)
         len_chosen = batch["chosen_labels"].shape[0]
 
+        model_kwargs = (
+            {
+                "labels": concatenated_batch["concatenated_labels"],
+                "decoder_input_ids": concatenated_batch.pop("concatenated_decoder_input_ids", None),
+            }
+            if self.is_encoder_decoder
+            else {}
+        )
         all_logits = model(
             concatenated_batch["concatenated_input_ids"],
             attention_mask=concatenated_batch["concatenated_attention_mask"],
-            # **model_kwargs,
+            **model_kwargs,
         ).logits.to(torch.float32)
 
         all_logps = self._get_batch_logps(
@@ -444,23 +515,57 @@ class SPINTrainer(Trainer):
 
         return (chosen_logps, rejected_logps, chosen_logits, rejected_logits)
 
-    def compose_metric(
+    def get_batch_metrics(
         self,
-        chosen_rewards,
-        rejected_rewards,
-        policy_chosen_logps,
-        policy_rejected_logps,
-        prefix,
+        model,
+        batch: Dict[str, Union[List, torch.LongTensor]],
+        train_eval: Literal["train", "eval"] = "train",
     ):
+        """Compute the SPIN loss and other metrics for the given batch of inputs for train or test."""
         metrics = {}
+
+        (
+            policy_chosen_logps,
+            policy_rejected_logps,
+            policy_chosen_logits,
+            policy_rejected_logits,
+        ) = self.concatenated_forward(model, batch)
+        with torch.no_grad():
+            if self.ref_model is None:
+                with self.accelerator.unwrap_model(self.model).disable_adapter():
+                    (
+                        reference_chosen_logps,
+                        reference_rejected_logps,
+                        _,
+                        _,
+                    ) = self.concatenated_forward(self.model, batch)
+            else:
+                (
+                    reference_chosen_logps,
+                    reference_rejected_logps,
+                    _,
+                    _,
+                ) = self.concatenated_forward(self.ref_model, batch)
+
+        losses, chosen_rewards, rejected_rewards = self.dpo_loss(
+            policy_chosen_logps,
+            policy_rejected_logps,
+            reference_chosen_logps,
+            reference_rejected_logps,
+        )
         reward_accuracies = (chosen_rewards > rejected_rewards).float()
+
+        prefix = "eval_" if train_eval == "eval" else ""
         metrics[f"{prefix}rewards/chosen"] = chosen_rewards.cpu().mean()
         metrics[f"{prefix}rewards/rejected"] = rejected_rewards.cpu().mean()
         metrics[f"{prefix}rewards/accuracies"] = reward_accuracies.cpu().mean()
         metrics[f"{prefix}rewards/margins"] = (chosen_rewards - rejected_rewards).cpu().mean()
         metrics[f"{prefix}logps/rejected"] = policy_rejected_logps.detach().cpu().mean()
         metrics[f"{prefix}logps/chosen"] = policy_chosen_logps.detach().cpu().mean()
-        return metrics
+        metrics[f"{prefix}logits/rejected"] = policy_rejected_logits.detach().cpu().mean()
+        metrics[f"{prefix}logits/chosen"] = policy_chosen_logits.detach().cpu().mean()
+
+        return losses.mean(), metrics
 
     def compute_loss(
         self,
@@ -468,29 +573,14 @@ class SPINTrainer(Trainer):
         inputs: Dict[str, Union[torch.Tensor, Any]],
         return_outputs=False,
     ) -> Union[torch.Tensor, Tuple[torch.Tensor, Dict[str, torch.Tensor]]]:
-        
-        # loss, metrics = self.get_batch_metrics(model, inputs, train_eval="train")
-        policy_chosen_logps, policy_rejected_logps, _, _ = self.concatenated_forward(model, inputs)
-        
-        with torch.no_grad():
-            if self.ref_model is None:
-                with self.accelerator.unwrap_model(self.model).disable_adapter():
-                    reference_chosen_logps, reference_rejected_logps, _, _= self.concatenated_forward(self.model, inputs)
-            else:
-                reference_chosen_logps, reference_rejected_logps, _, _= self.concatenated_forward(self.model, inputs)
+        if not self.use_dpo_data_collator:
+            warnings.warn(
+                "compute_loss is only implemented for SPINDataCollatorWithPadding, and you passed a datacollator that is different than "
+                "SPINDataCollatorWithPadding - you might see unexpected behavior. Alternatively, you can implement your own prediction_step method if you are using a custom data collator"
+            )
+        loss, metrics = self.get_batch_metrics(model, inputs, train_eval="train")
 
-        pi_logratios = policy_chosen_logps - policy_rejected_logps
-        ref_logratios = reference_chosen_logps - reference_rejected_logps
-        logits = pi_logratios - ref_logratios
-        losses = -F.logsigmoid(self.beta * logits)
-
-        chosen_rewards = self.beta * (policy_chosen_logps - reference_chosen_logps).detach()
-        rejected_rewards = self.beta * (policy_rejected_logps - reference_rejected_logps).detach()
-
-        loss = losses.mean()
-
-        metrics = self.compose_metric(chosen_rewards, rejected_rewards, policy_chosen_logps, policy_rejected_logps, "")
-
+        # force log the metrics
         if self.accelerator.is_main_process:
             self.store_metrics(metrics, train_eval="train")
 
@@ -535,98 +625,98 @@ class SPINTrainer(Trainer):
 
         return policy_output_decoded, reference_output_decoded
 
-    # def prediction_step(
-    #     self,
-    #     model: Union[PreTrainedModel, nn.Module],
-    #     inputs: Dict[str, Union[torch.Tensor, Any]],
-    #     prediction_loss_only: bool,
-    #     ignore_keys: Optional[List[str]] = None,
-    # ):
-    #     if not self.use_data_collator:
-    #         warnings.warn(
-    #             "prediction_step is only implemented for DataCollatorWithPadding, and you passed a datacollator that is different than "
-    #             "DataCollatorWithPadding - you might see unexpected behavior. Alternatively, you can implement your own prediction_step method if you are using a custom data collator"
-    #         )
-    #     if ignore_keys is None:
-    #         if hasattr(model, "config"):
-    #             ignore_keys = getattr(model.config, "keys_to_ignore_at_inference", [])
-    #         else:
-    #             ignore_keys = []
+    def prediction_step(
+        self,
+        model: Union[PreTrainedModel, nn.Module],
+        inputs: Dict[str, Union[torch.Tensor, Any]],
+        prediction_loss_only: bool,
+        ignore_keys: Optional[List[str]] = None,
+    ):
+        if not self.use_dpo_data_collator:
+            warnings.warn(
+                "prediction_step is only implemented for SPINDataCollatorWithPadding, and you passed a datacollator that is different than "
+                "SPINDataCollatorWithPadding - you might see unexpected behavior. Alternatively, you can implement your own prediction_step method if you are using a custom data collator"
+            )
+        if ignore_keys is None:
+            if hasattr(model, "config"):
+                ignore_keys = getattr(model.config, "keys_to_ignore_at_inference", [])
+            else:
+                ignore_keys = []
 
-    #     with torch.no_grad():
-    #         loss, metrics = self.get_batch_metrics(model, inputs, train_eval="eval")
+        with torch.no_grad():
+            loss, metrics = self.get_batch_metrics(model, inputs, train_eval="eval")
 
-    #     # force log the metrics
-    #     if self.accelerator.is_main_process:
-    #         self.store_metrics(metrics, train_eval="eval")
+        # force log the metrics
+        if self.accelerator.is_main_process:
+            self.store_metrics(metrics, train_eval="eval")
 
-    #     if prediction_loss_only:
-    #         return (loss.detach(), None, None)
+        if prediction_loss_only:
+            return (loss.detach(), None, None)
 
-    #     # logits for the chosen and rejected samples from model
-    #     logits_dict = {
-    #         "eval_logits/chosen": metrics["eval_logits/chosen"],
-    #         "eval_logits/rejected": metrics["eval_logits/rejected"],
-    #     }
-    #     logits = tuple(v.unsqueeze(dim=0) for k, v in logits_dict.items() if k not in ignore_keys)
-    #     logits = torch.stack(logits).mean(axis=1).to(self.accelerator.device)
-    #     labels = torch.zeros(logits.shape[0], device=self.accelerator.device)
+        # logits for the chosen and rejected samples from model
+        logits_dict = {
+            "eval_logits/chosen": metrics["eval_logits/chosen"],
+            "eval_logits/rejected": metrics["eval_logits/rejected"],
+        }
+        logits = tuple(v.unsqueeze(dim=0) for k, v in logits_dict.items() if k not in ignore_keys)
+        logits = torch.stack(logits).mean(axis=1).to(self.accelerator.device)
+        labels = torch.zeros(logits.shape[0], device=self.accelerator.device)
 
-    #     return (loss.detach(), logits, labels)
+        return (loss.detach(), logits, labels)
 
     def store_metrics(self, metrics: Dict[str, float], train_eval: Literal["train", "eval"] = "train") -> None:
         for key, value in metrics.items():
             self._stored_metrics[train_eval][key].append(value)
 
-    # def evaluation_loop(
-    #     self,
-    #     dataloader: DataLoader,
-    #     description: str,
-    #     prediction_loss_only: Optional[bool] = None,
-    #     ignore_keys: Optional[List[str]] = None,
-    #     metric_key_prefix: str = "eval",
-    # ) -> EvalLoopOutput:
-    #     """
-    #     Overriding built-in evaluation loop to store metrics for each batch.
-    #     Prediction/evaluation loop, shared by `Trainer.evaluate()` and `Trainer.predict()`.
+    def evaluation_loop(
+        self,
+        dataloader: DataLoader,
+        description: str,
+        prediction_loss_only: Optional[bool] = None,
+        ignore_keys: Optional[List[str]] = None,
+        metric_key_prefix: str = "eval",
+    ) -> EvalLoopOutput:
+        """
+        Overriding built-in evaluation loop to store metrics for each batch.
+        Prediction/evaluation loop, shared by `Trainer.evaluate()` and `Trainer.predict()`.
 
-    #     Works both with or without labels.
-    #     """
+        Works both with or without labels.
+        """
 
-    #     # Sample and save to game log if requested (for one batch to save time)
-    #     if self.generate_during_eval:
-    #         # Generate random indices within the range of the total number of samples
-    #         num_samples = len(dataloader.dataset)
-    #         random_indices = random.sample(range(num_samples), k=self.args.eval_batch_size)
+        # Sample and save to game log if requested (for one batch to save time)
+        if self.generate_during_eval:
+            # Generate random indices within the range of the total number of samples
+            num_samples = len(dataloader.dataset)
+            random_indices = random.sample(range(num_samples), k=self.args.eval_batch_size)
 
-    #         # Use dataloader.dataset.select to get the random batch without iterating over the DataLoader
-    #         random_batch_dataset = dataloader.dataset.select(random_indices)
-    #         random_batch = self.data_collator(random_batch_dataset)
-    #         random_batch = self._prepare_inputs(random_batch)
+            # Use dataloader.dataset.select to get the random batch without iterating over the DataLoader
+            random_batch_dataset = dataloader.dataset.select(random_indices)
+            random_batch = self.data_collator(random_batch_dataset)
+            random_batch = self._prepare_inputs(random_batch)
 
-    #         policy_output_decoded, ref_output_decoded = self.get_batch_samples(self.model, random_batch)
+            policy_output_decoded, ref_output_decoded = self.get_batch_samples(self.model, random_batch)
 
-    #         self.log(
-    #             {
-    #                 "game_log": wandb.Table(
-    #                     columns=["Prompt", "Policy", "Ref Model"],
-    #                     rows=[
-    #                         [prompt, pol[len(prompt) :], ref[len(prompt) :]]
-    #                         for prompt, pol, ref in zip(
-    #                             random_batch["prompt"], policy_output_decoded, ref_output_decoded
-    #                         )
-    #                     ],
-    #                 )
-    #             }
-    #         )
-    #         self.state.log_history.pop()
+            self.log(
+                {
+                    "game_log": wandb.Table(
+                        columns=["Prompt", "Policy", "Ref Model"],
+                        rows=[
+                            [prompt, pol[len(prompt) :], ref[len(prompt) :]]
+                            for prompt, pol, ref in zip(
+                                random_batch["prompt"], policy_output_decoded, ref_output_decoded
+                            )
+                        ],
+                    )
+                }
+            )
+            self.state.log_history.pop()
 
-    #     # Base evaluation
-    #     initial_output = super().evaluation_loop(
-    #         dataloader, description, prediction_loss_only, ignore_keys, metric_key_prefix
-    #     )
+        # Base evaluation
+        initial_output = super().evaluation_loop(
+            dataloader, description, prediction_loss_only, ignore_keys, metric_key_prefix
+        )
 
-    #     return initial_output
+        return initial_output
 
     def log(self, logs: Dict[str, float]) -> None:
         """
