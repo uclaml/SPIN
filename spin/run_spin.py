@@ -1,18 +1,4 @@
 #!/usr/bin/env python
-# coding=utf-8
-# Copyright 2023 The HuggingFace Inc. team. All rights reserved.
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
 import logging
 import sys
 
@@ -35,7 +21,8 @@ from alignment import (
     is_adapter_model,
 )
 from peft import PeftConfig, PeftModel
-from trl import DPOTrainer
+from alignment import SPINTrainer
+from torch.utils.data import Subset
 
 
 logger = logging.getLogger(__name__)
@@ -74,6 +61,8 @@ def main():
     # Load datasets
     ###############
     raw_datasets = get_datasets(data_args, splits=data_args.dataset_splits)
+    # print(raw_datasets)
+    # exit()
     logger.info(
         f"Training on the following splits: {[split + ' : ' + str(dset.num_rows) for split, dset in raw_datasets.items()]}"
     )
@@ -118,30 +107,30 @@ def main():
     )
 
     model = model_args.model_name_or_path
-    if is_adapter_model(model, model_args.model_revision):
-        # load the model, merge the adapter weights and unload the adapter
-        # Note: to run QLora, you will need to merge the based model separately as the merged model in 16bit
-        logger.info(f"Merging peft adapters for {model_args.model_name_or_path=}")
+    # if is_adapter_model(model, model_args.model_revision):
+    #     # load the model, merge the adapter weights and unload the adapter
+    #     # Note: to run QLora, you will need to merge the based model separately as the merged model in 16bit
+    #     logger.info(f"Merging peft adapters for {model_args.model_name_or_path=}")
 
-        peft_config = PeftConfig.from_pretrained(model_args.model_name_or_path, revision=model_args.model_revision)
+    #     peft_config = PeftConfig.from_pretrained(model_args.model_name_or_path, revision=model_args.model_revision)
 
-        model_kwargs = dict(
-            revision=model_args.base_model_revision,
-            trust_remote_code=model_args.trust_remote_code,
-            use_flash_attention_2=model_args.use_flash_attention_2,
-            torch_dtype=torch_dtype,
-            use_cache=False if training_args.gradient_checkpointing else True,
-        )
-        base_model = AutoModelForCausalLM.from_pretrained(
-            peft_config.base_model_name_or_path,
-            **model_kwargs,
-        )
-        model = PeftModel.from_pretrained(
-            base_model, model_args.model_name_or_path, revision=model_args.model_revision
-        )
-        model.eval()
-        model = model.merge_and_unload()
-        model_kwargs = None
+    #     model_kwargs = dict(
+    #         revision=model_args.base_model_revision,
+    #         trust_remote_code=model_args.trust_remote_code,
+    #         use_flash_attention_2=model_args.use_flash_attention_2,
+    #         torch_dtype=torch_dtype,
+    #         use_cache=False if training_args.gradient_checkpointing else True,
+    #     )
+    #     base_model = AutoModelForCausalLM.from_pretrained(
+    #         peft_config.base_model_name_or_path,
+    #         **model_kwargs,
+    #     )
+    #     model = PeftModel.from_pretrained(
+    #         base_model, model_args.model_name_or_path, revision=model_args.model_revision
+    #     )
+    #     model.eval()
+    #     model = model.merge_and_unload()
+    #     model_kwargs = None
 
     ref_model = model
     ref_model_kwargs = model_kwargs
@@ -153,7 +142,7 @@ def main():
     #########################
     # Instantiate spin trainer
     #########################
-    spin_trainer = DPOTrainer(
+    spin_trainer = SPINTrainer(
         model,
         ref_model,
         model_init_kwargs=model_kwargs,
@@ -183,19 +172,6 @@ def main():
 
     logger.info("*** Training complete ***")
 
-    ##########
-    # Evaluate
-    ##########
-    if training_args.do_eval:
-        logger.info("*** Evaluate ***")
-        metrics = spin_trainer.evaluate()
-        max_eval_samples = (
-            data_args.max_eval_samples if data_args.max_eval_samples is not None else len(raw_datasets["test"])
-        )
-        metrics["eval_samples"] = min(max_eval_samples, len(raw_datasets["test"]))
-        spin_trainer.log_metrics("eval", metrics)
-        spin_trainer.save_metrics("eval", metrics)
-
     ##################################
     # Save model and create model card
     ##################################
@@ -212,8 +188,6 @@ def main():
         # Restore k,v cache for fast inference
         spin_trainer.model.config.use_cache = True
         spin_trainer.model.config.save_pretrained(training_args.output_dir)
-        if training_args.push_to_hub is True:
-            spin_trainer.push_to_hub()
 
     # Ensure we don't timeout on model save / push to Hub
     logger.info("*** Waiting for all processes to finish ***")

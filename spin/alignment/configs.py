@@ -243,13 +243,10 @@ class SFTConfig(transformers.TrainingArguments):
 
 @dataclass
 class SPINConfig(transformers.TrainingArguments):
-    """
-    Arguments related to the DPO training process itself. For all parameters, see: https://huggingface.co/docs/transformers/v4.26.1/en/main_classes/trainer#transformers.TrainingArguments
-    """
 
     beta: Optional[float] = field(
         default=0.1,
-        metadata={"help": "The beta factor in DPO loss. Higher beta means less divergence from the initial policy."},
+        metadata={"help": "The beta factor in SPIN loss. Higher beta means less divergence from the initial policy."},
     )
     hub_model_revision: Optional[str] = field(
         default="main",
@@ -261,7 +258,7 @@ class SPINConfig(transformers.TrainingArguments):
     )
     max_prompt_length: Optional[int] = field(
         default=None,
-        metadata={"help": ("For DPO, the maximum length of the prompt to use for conditioning the model.")},
+        metadata={"help": ("The maximum length of the prompt to use for conditioning the model.")},
     )
     max_length: Optional[int] = field(
         default=None,
