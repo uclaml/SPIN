@@ -239,6 +239,17 @@
           At iteration 1, SPIN has already surpassed DPO training on the majority of datasets.
         </h2>
       </div>
+      <div class="item">
+        <!-- Your image here -->
+        <img src="static/images/tab2.png"/>
+        <h2 class="subtitle has-text-centered">
+          Test performance on other reasoning benchmark datasets for SPIN at different iterations 
+          and zephyr-7b-sft-full. We report the average score for MT-Bench and the accuracy score for 
+          Big Bench datasets under standard few-shot CoT evaluation. On OpenBookQA, we report acc_norm 
+          with 1-shot example as similar to previous literature. As similar to Open LLM Leaderboard evaluation, 
+          we observe a steady improvement in performance on the other benchmark tasks, with no significant degradation.
+        </h2>
+      </div>
     </div>
   </div>
 </div>
@@ -254,9 +265,7 @@
         <p>
           We examine the effect of synthetic dataset size and training epochs within an iteration. 
           Our analysis demonstrates the effectiveness of the synthetic data used by SPIN compared to 
-          the SFT data, as well as the necessity of iterative training in SPIN. Furthermore, to comprehensively 
-          assess the performance improvements of SPIN, we perform additional evaluations on benchmark 
-          tasks distinct from those in the Open LLM leaderboard.
+          the SFT data, as well as the necessity of iterative training in SPIN. 
         </p>
     </div>
   </div>
@@ -289,17 +298,6 @@
           pivotal as training for more epochs during iteration 0 reaches a limit and cannot surpass iteration 1.
         </h2>
        </div>
-      <div class="item">
-        <!-- Your image here -->
-        <img src="static/images/tab2.png"/>
-        <h2 class="subtitle has-text-centered">
-          Test performance on other reasoning benchmark datasets for SPIN at different iterations 
-          and zephyr-7b-sft-full. We report the average score for MT-Bench and the accuracy score for 
-          Big Bench datasets under standard few-shot CoT evaluation. On OpenBookQA, we report acc_norm 
-          with 1-shot example as similar to previous literature. As similar to Open LLM Leaderboard evaluation, 
-          we observe a steady improvement in performance on the other benchmark tasks, with no significant degradation.
-        </h2>
-      </div>
     </div>
   </div>
 </div>
