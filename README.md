@@ -127,6 +127,8 @@ Options
     - `--frac_len`: length of the data fraction. Default is 0 which uses the entire dataset for generation. Set `frac_len` to a positive number to generate only for a fraction of data.  
     - Setting `data_frac` to be 0, 1, 2... to generate for different fractions of length `frac_len`.
     - Note: maintain the same frac length when doing generation using data_frac. It's recommended to set a smaller `frac_len` to 800.
+- `--split`: choose the split for data generation
+    - default: `train`
 
 The generated data is in json format where each data contains the following attributes:
 ```

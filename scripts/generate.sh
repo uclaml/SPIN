@@ -12,3 +12,5 @@ accelerate launch --main_process_port=2950 spin/generate.py --model UCLA-AGI/zep
 accelerate launch --main_process_port=2950 spin/generate.py --model UCLA-AGI/zephyr-7b-sft-full-SPIN-iter0 --input_dir UCLA-AGI/SPIN_iter0 --batch_size 8 --frac_len 800 --data_frac 9
 accelerate launch --main_process_port=2950 spin/generate.py --model UCLA-AGI/zephyr-7b-sft-full-SPIN-iter0 --input_dir UCLA-AGI/SPIN_iter0 --batch_size 8 --frac_len 800 --data_frac 10
 
+# Generate for the test split as well
+accelerate launch --main_process_port=2950 spin/generate.py --model UCLA-AGI/zephyr-7b-sft-full-SPIN-iter0 --input_dir UCLA-AGI/SPIN_iter0 --batch_size 8 --frac_len 800 --data_frac 0 --split test
