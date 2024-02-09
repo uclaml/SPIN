@@ -38,7 +38,7 @@ def apply_chat_template(
         example["text_generated"] = _strip_prefix(example["text_generated"], assistant_prefix)
     else:
         raise ValueError(
-            f"Require `[chosen, rejected]` keys but found {list(example.keys())}"
+            f"Require `[real, generated]` keys but found {list(example.keys())}"
             )
     return example
 

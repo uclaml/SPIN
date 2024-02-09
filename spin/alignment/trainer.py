@@ -365,7 +365,7 @@ class SPINTrainer(Trainer):
         """Concatenate the real and generated inputs into a single tensor.
 
         Args:
-            batch: A batch of data. Must contain the keys 'åchosen_input_ids' and 'rejected_input_ids', which are tensors of shape (batch_size, sequence_length).
+            batch: A batch of data. Must contain the keys 'åreal_input_ids' and 'generated_input_ids', which are tensors of shape (batch_size, sequence_length).
 
         Returns:
             A dictionary containing the concatenated inputs under the key 'concatenated_input_ids'.
@@ -373,9 +373,9 @@ class SPINTrainer(Trainer):
         concatenated_batch = {}
 
         if self.is_encoder_decoder:
-            max_length = max(batch["chosen_labels"].shape[1], batch["rejected_labels"].shape[1])
+            max_length = max(batch["real_labels"].shape[1], batch["generated_labels"].shape[1])
         else:
-            max_length = max(batch["chosen_input_ids"].shape[1], batch["rejected_input_ids"].shape[1])
+            max_length = max(batch["real_input_ids"].shape[1], batch["generated_input_ids"].shape[1])
 
         for k in batch:
             if k.startswith("real") and isinstance(batch[k], torch.Tensor):
@@ -485,7 +485,7 @@ class SPINTrainer(Trainer):
         We do this to avoid doing two forward passes, because it's faster for FSDP.
         """
         concatenated_batch = self.concatenated_inputs(batch)
-        len_real = batch["chosen_labels"].shape[0]
+        len_real = batch["real_labels"].shape[0]
 
         model_kwargs = (
             {
@@ -531,21 +531,12 @@ class SPINTrainer(Trainer):
             policy_generated_logits,
         ) = self.concatenated_forward(model, batch)
         with torch.no_grad():
-            if self.ref_model is None:
-                with self.accelerator.unwrap_model(self.model).disable_adapter():
-                    (
-                        opponent_real_logps,
-                        opponent_generated_logps,
-                        _,
-                        _,
-                    ) = self.concatenated_forward(self.model, batch)
-            else:
-                (
-                    opponent_real_logps,
-                    opponent_generated_logps,
-                    _,
-                    _,
-                ) = self.concatenated_forward(self.ref_model, batch)
+            (
+                opponent_real_logps,
+                opponent_generated_logps,
+                _,
+                _,
+            ) = self.concatenated_forward(self.ref_model, batch)
 
         losses, real_rewards, generated_rewards = self.spin_loss(
             policy_real_logps,

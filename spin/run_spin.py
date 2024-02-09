@@ -14,7 +14,6 @@ from alignment import (
     SPINConfig,
     H4ArgumentParser,
     ModelArguments,
-    apply_chat_template,
     get_datasets,
     get_kbit_device_map,
     get_peft_config,
@@ -25,7 +24,38 @@ from alignment import (
 from peft import PeftConfig, PeftModel
 from alignment import SPINTrainer
 from torch.utils.data import Subset
+import re
 
+def apply_chat_template(
+    example, tokenizer, task, assistant_prefix="<|assistant|>\n"
+):
+    def _strip_prefix(s, pattern):
+        # Use re.escape to escape any special characters in the pattern
+        return re.sub(f"^{re.escape(pattern)}", "", s)
+
+    if all(k in example.keys() for k in ("real", "generated")):
+        # Compared to reward modeling, we filter out the prompt, so the text is everything after the last assistant token
+        prompt_messages = [[msg for msg in example["real"] if msg["role"] == "user"][0]]
+        # Insert system message
+        if example["real"][0]["role"] != "system":
+            prompt_messages.insert(0, {"role": "system", "content": ""})
+        else:
+            prompt_messages.insert(0, example["real"][0])
+
+        real_messages = example["real"][1:]
+        generated_messages = example["generated"][1:]
+        example["text_real"] = tokenizer.apply_chat_template(real_messages, tokenize=False)
+        example["text_generated"] = tokenizer.apply_chat_template(generated_messages, tokenize=False)
+        example["text_prompt"] = tokenizer.apply_chat_template(
+            prompt_messages, tokenize=False, add_generation_prompt=True
+        )
+        example["text_real"] = _strip_prefix(example["text_real"], assistant_prefix)
+        example["text_generated"] = _strip_prefix(example["text_generated"], assistant_prefix)
+    else:
+        raise ValueError(
+            f"Require `[real, generated]` keys but found {list(example.keys())}"
+            )
+    return example
 
 logger = logging.getLogger(__name__)
 
@@ -63,7 +93,6 @@ def main():
     # Load datasets
     ###############
     raw_datasets = get_datasets(data_args, splits=data_args.dataset_splits)
-
     logger.info(
         f"Training on the following splits: {[split + ' : ' + str(dset.num_rows) for split, dset in raw_datasets.items()]}"
     )
