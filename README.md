@@ -21,6 +21,7 @@ Authors: [Zixiang Chen](https://sites.google.com/view/zxchen)\*, [Yihe Deng](htt
 - [About SPIN](#🌀-about-spin)
 - [Setup](#Setup)
     - [Data](#Data)
+    - [Model](#Model)
 - [Usage](#Usage)
     - [Step 1: Generation](#step-1-generation)
     - [Step 1.5: Gather generations and convert data type](#step-15-gather-generations-and-convert-data-type)
