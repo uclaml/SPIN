@@ -27,15 +27,15 @@ def apply_chat_template(
         else:
             prompt_messages.insert(0, example["real"][0])
 
-        chosen_messages = example["real"][1:]
-        rejected_messages = example["generated"][1:]
-        example["text_chosen"] = tokenizer.apply_chat_template(chosen_messages, tokenize=False)
-        example["text_rejected"] = tokenizer.apply_chat_template(rejected_messages, tokenize=False)
+        real_messages = example["real"][1:]
+        generated_messages = example["generated"][1:]
+        example["text_real"] = tokenizer.apply_chat_template(real_messages, tokenize=False)
+        example["text_generated"] = tokenizer.apply_chat_template(generated_messages, tokenize=False)
         example["text_prompt"] = tokenizer.apply_chat_template(
             prompt_messages, tokenize=False, add_generation_prompt=True
         )
-        example["text_chosen"] = _strip_prefix(example["text_chosen"], assistant_prefix)
-        example["text_rejected"] = _strip_prefix(example["text_rejected"], assistant_prefix)
+        example["text_real"] = _strip_prefix(example["text_real"], assistant_prefix)
+        example["text_generated"] = _strip_prefix(example["text_generated"], assistant_prefix)
     else:
         raise ValueError(
             f"Require `[chosen, rejected]` keys but found {list(example.keys())}"

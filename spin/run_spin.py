@@ -86,7 +86,7 @@ def main():
         desc="Formatting comparisons with prompt template",
     )
 
-    # Replace column names with what TRL needs, text_chosen -> chosen and text_rejected -> rejected
+    # Replace column names with what TRL needs, text_real -> real and text_generated -> generated
     for split in ["train", "test"]:
         raw_datasets[split] = raw_datasets[split].rename_columns(
             {"text_prompt": "prompt", "text_real": "real", "text_generated": "generated"}
