@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <!-- Meta tags for social media banners, these should be filled in appropriatly as they are your "business card" -->
+  <!-- Replace the content tag with appropriate information -->
+  <meta name="description" content="SPIN">
+  <meta property="og:title" content="Self-Play Fine-Tuning Converts Weak Language Models to Strong Language Models"/>
+  <meta property="og:description" content="SPIN utilizes a self-play mechanism, allowing an LLM to improve itself by playing against its previous iterations."/>
+  <meta property="og:url" content="https://github.com/uclaml/SPIN"/>
+  
+
+  <meta name="twitter:title" content="Self-Play Fine-Tuning Converts Weak Language Models to Strong Language Models">
+  <meta name="twitter:description" content="SPIN utilizes a self-play mechanism, allowing an LLM to improve itself by playing against its previous iterations.">
+  <!-- Keywords for your paper to be indexed by-->
+  <meta name="keywords" content="LLM, self-play, fine-tuning, synthetic data">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+
+  <title>Self-Play Fine-Tuning Converts Weak Language Models to Strong Language Models</title>
+  <link rel="icon" type="image/x-icon" href="static/images/star.ico">
+  <link href="https://fonts.googleapis.com/css?family=Google+Sans|Noto+Sans|Castoro"
+  rel="stylesheet">
+
+  <link rel="stylesheet" href="static/css/bulma.min.css">
+  <link rel="stylesheet" href="static/css/bulma-carousel.min.css">
+  <link rel="stylesheet" href="static/css/bulma-slider.min.css">
+  <link rel="stylesheet" href="static/css/fontawesome.all.min.css">
+  <link rel="stylesheet"
+  href="https://cdn.jsdelivr.net/gh/jpswalsh/academicons@1/css/academicons.min.css">
+  <link rel="stylesheet" href="static/css/index.css">
+
+  <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+  <script src="https://documentcloud.adobe.com/view-sdk/main.js"></script>
+  <script defer src="static/js/fontawesome.all.min.js"></script>
+  <script src="static/js/bulma-carousel.min.js"></script>
+  <script src="static/js/bulma-slider.min.js"></script>
+  <script src="static/js/index.js"></script>
+</head>
+<body>
+
+
+  <section class="hero">
+    <div class="hero-body">
+      <div class="container is-max-desktop">
+        <div class="columns is-centered">
+          <div class="column has-text-centered">
+            <h1 class="title is-1 publication-title">Self-Play Fine-Tuning Converts Weak Language Models to Strong Language Models</h1>
+            <div class="is-size-5 publication-authors">
+              <!-- Paper authors -->
+              <span class="author-block">
+                <a href="https://sites.google.com/view/zxchen/" target="_blank">Zixiang Chen</a><sup>*</sup>,</span>
+                <span class="author-block">
+                  <a href="https://sites.google.com/g.ucla.edu/yihedeng/home" target="_blank">Yihe Deng</a><sup>*</sup>,</span>
+                  <span class="author-block">
+                    <a href="https://scholar.google.com/citations?user=8foZzX4AAAAJ" target="_blank">Huizhuo Yuan</a><sup>*</sup>,</span>
+                    <span class="author-block">
+                      <a href="https://scholar.google.com/citations?user=FOoKDukAAAAJ" target="_blank">Kaixuan Ji</a>,</span>
+                      <span class="author-block">
+                        <a href="https://web.cs.ucla.edu/~qgu/" target="_blank">Quanquan Gu</a>
+                  </span>
+                  </div>
+
+                  <div class="is-size-5 publication-authors">
+                    <span class="author-block">University of California, Los Angeles</span>
+                    <span class="eql-cntrb"><small><br><sup>*</sup>Indicates Equal Contribution</small></span>
+                  </div>
+
+                  <div class="column has-text-centered">
+                    <div class="publication-links">
+                         <!-- Arxiv PDF link -->
+                      <span class="link-block">
+                        <a href="https://arxiv.org/pdf/2401.01335.pdf" target="_blank"
+                        class="external-link button is-normal is-rounded is-dark">
+                        <span class="icon">
+                          <i class="fas fa-file-pdf"></i>
+                        </span>
+                        <span>Paper</span>
+                      </a>
+                    </span>
+
+                  <!-- Github link -->
+                  <span class="link-block">
+                    <a href="https://github.com/uclaml/SPIN" target="_blank"
+                    class="external-link button is-normal is-rounded is-dark">
+                    <span class="icon">
+                      <i class="fab fa-github"></i>
+                    </span>
+                    <span>Code</span>
+                  </a>
+                </span>
+
+                <!-- ArXiv abstract Link -->
+                <span class="link-block">
+                  <a href="https://arxiv.org/abs/2401.01335" target="_blank"
+                  class="external-link button is-normal is-rounded is-dark">
+                  <span class="icon">
+                    <i class="ai ai-arxiv"></i>
+                  </span>
+                  <span>arXiv</span>
+                </a>
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Paper abstract -->
+<section class="section hero is-light">
+  <div class="container is-max-desktop">
+    <div class="columns is-centered has-text-centered">
+      <div class="column is-four-fifths">
+        <h2 class="title is-3">Abstract</h2>
+        <div class="content has-text-justified">
+          <p>
+            Harnessing the power of human-annotated data through Supervised Fine-Tuning (SFT) is pivotal for advancing Large Language Models (LLMs). In this paper, we delve into the prospect of growing a strong LLM out of a weak one without the need for acquiring additional human-annotated data. We propose a new fine-tuning method called Self-Play fIne-tuNing (SPIN), which starts from a supervised fine-tuned model. At the heart of SPIN lies a self-play mechanism, where the LLM refines its capability by playing against instances of itself. More specifically, the LLM generates its own training data from its previous iterations, refining its policy by discerning these self-generated responses from those obtained from human-annotated data. Our method progressively elevates the LLM from a nascent model to a formidable one, unlocking the full potential of human-annotated demonstration data for SFT. Theoretically, we prove that the global optimum to the training objective function of our method is achieved only when the LLM policy aligns with the target data distribution. Empirically, we evaluate our method on several benchmark datasets including the HuggingFace Open LLM Leaderboard, MT-Bench, and datasets from Big-Bench. Our results show that SPIN can significantly improve the LLM's performance across a variety of benchmarks and even outperform models trained through direct preference optimization (DPO) supplemented with extra GPT-4 preference data. This sheds light on the promise of self-play, enabling the achievement of human-level performance in LLMs without the need for expert opponents
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+<!-- End paper abstract -->
+
+<!-- SPIN. -->
+<div class="columns is-centered">
+  <div class="column is-three-fifths">
+    <h2 class="title is-3">Self-Play Fine-Tuning (SPIN)</h2>
+    <img src="images/spin_dalle.png" alt="MY ALT TEXT"/>
+  </div>
+</div>
+<!--/ SPIN. -->
+
+<!-- Results. -->
+<div class="columns is-centered">
+  <div class="column is-three-fifths">
+    <h2 class="title is-3">Results</h2>
+      <div class="content has-text-justified">
+        <p>
+          In this study, we adopt zephyr-7b-sft-full as our base model. This model derives from the pre-trained Mistral-7B and has been further fine-tuned
+          on the SFT dataset Ultrachat200k1 by HuggingFace. From UltraChat200k, We randomly sample 50k prompts and use the base model to generate the synthetic responses. 
+          We evaluate SPIN on a wide range of benchmarks, including the HuggingFace Open LLM Leaderboard, MT-Bench, and datasets from Big-Bench. 
+          Our findings highlight several key points: 
+        </p>
+        <ul>
+          <li>SPIN markedly enhances model performance across a wide range of evaluation benchmarks by breaking the limit of SFT; </li>
+          <li>even without introducing new human annotated data, SPIN at iteration 0 achieves performance on par to DPO training that utilizes even more data; </li>
+          <li>iterative training is a necessary component in SPIN as it breaks the limit of multi-epoch training.</li>
+        </ul>
+    </div>
+  </div>
+</div>
+<!--/ Results. -->
+<!-- Image carousel -->
+<section class="hero is-small">
+  <div class="hero-body">
+    <div class="container">
+      <div id="results-carousel" class="carousel results-carousel">
+       <div class="item">
+        <!-- Your image here -->
+        <img src="images/iter_openllm.png" alt="MY ALT TEXT"/>
+        <h2 class="subtitle has-text-centered">
+          Average score of SPIN at different iterations on the HuggingFace Open LLM leaderboard.
+        </h2>
+      </div>
+      <div class="item">
+        <!-- Your image here -->
+        <img src="images/dpo_compare.png" alt="MY ALT TEXT"/>
+        <h2 class="subtitle has-text-centered">
+          Performance comparison with DPO training across the six benchmark datasets. 
+          SPIN at iteration 0 achieves comparable performance to DPO training with 62k new data. 
+          At iteration 1, SPIN has already surpassed DPO training on the majority of datasets.
+        </h2>
+      </div>
+    </div>
+  </div>
+</div>
+</div>
+</section>
+<!-- End image carousel -->
+
+<!--BibTex citation -->
+  <section class="section" id="BibTeX">
+    <div class="container is-max-desktop content">
+      <h2 class="title">BibTeX</h2>
+      <pre><code>@misc{chen2024selfplay,
+        title={Self-Play Fine-Tuning Converts Weak Language Models to Strong Language Models}, 
+        author={Zixiang Chen and Yihe Deng and Huizhuo Yuan and Kaixuan Ji and Quanquan Gu},
+        year={2024},
+        eprint={2401.01335},
+        archivePrefix={arXiv},
+        primaryClass={cs.LG}
+      }</code></pre>
+    </div>
+</section>
+<!--End BibTex citation -->
+
+
+  <footer class="footer">
+  <div class="container">
+    <div class="columns is-centered">
+      <div class="column is-8">
+        <div class="content">
+
+          <p>
+            This page was built using the <a href="https://github.com/eliahuhorwitz/Academic-project-page-template" target="_blank">Academic Project Page Template</a> which was adopted from the <a href="https://nerfies.github.io" target="_blank">Nerfies</a> project page.
+            <br> This website is licensed under a <a rel="license"  href="http://creativecommons.org/licenses/by-sa/4.0/" target="_blank">Creative
+            Commons Attribution-ShareAlike 4.0 International License</a>.
+          </p>
+
+        </div>
+      </div>
+    </div>
+  </div>
+</footer>
+
+<!-- Statcounter tracking code -->
+  
+<!-- You can add a tracker to track page visits by creating an account at statcounter.com -->
+
+    <!-- End of Statcounter Code -->
+
+  </body>
+  </html>
