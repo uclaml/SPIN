@@ -1,11 +1,9 @@
-# import os
-# import random
-# import warnings
+# Adapted from https://github.com/huggingface/alignment-handbook 
+
 from collections import deque
 from dataclasses import dataclass
 from typing import Any, Dict, List, Optional, Tuple, Union
 
-# import numpy as np
 import torch
 from torch.nn.utils.rnn import pad_sequence
 from torch.utils.data import IterableDataset

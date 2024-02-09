@@ -27,19 +27,6 @@ def load_and_process_data_ultrachat(dataset_name, split):
         logging.error(f"Error loading or processing dataset: {e}")
         return []
 
-
-def load_and_process_data_metamath(dataset_name, split):
-    try:
-        dataset = load_dataset(dataset_name, split=split)
-        reformatted_data = [{
-            'generated': [{"role": "user", "content": message['query']}, {"role": "assistant", "content": ""}], 
-            'real': [{"role": "user", "content": message['query']}, {"role": "assistant", "content": message['response']}]
-        } for message in dataset]
-        return reformatted_data
-    except Exception as e:
-        logging.error(f"Error loading or processing dataset: {e}")
-        return []
-
 def save_to_json(data, path):
     try:
         with open(path, 'w') as f:
@@ -61,11 +48,6 @@ def main():
     if args.data == 'HuggingFaceH4/ultrachat_200k':
         train_data = load_and_process_data_ultrachat(args.data, 'train_sft')
         test_data = load_and_process_data_ultrachat(args.data, 'test_sft')
-    elif args.data == 'meta-math/MetaMathQA':
-        train_data = load_and_process_data_metamath(args.data, 'train')
-        random.shuffle(train_data)
-        train_data = train_data[:-1000]
-        test_data = train_data[-1000:]
 
     train_json_path = output_dir / 'train.json'
     test_json_path = output_dir / 'test.json'

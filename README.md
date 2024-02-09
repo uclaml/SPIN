@@ -172,9 +172,12 @@ accelerate launch --config_file configs/multi_gpu.yaml --num_processes=8 --main_
 
 You might need to change the configuration in `configs/config.yaml`. Here are some key configs you might need to customize:
 
-- `--model_name_or_path`: load model checkpoint for finetuning.
+- `model_name_or_path`: load model checkpoint for finetuning.
     - default: `alignment-handbook/zephyr-7b-sft-full`
-- `--output_dir`: the output directory of finetuned model and checkpoints. 
+- `dataset_mixer`: choose data to mix for fine-tuning.
+    - default: `UCLA-AGI/SPIN_iter0: 1.0`
+    - For SPIN at iteration 1 and 2, we included both the current iteration and the previous iteration (e.g. for iteration 1 we included both `UCLA-AGI/SPIN_iter0: 1.0` and `UCLA-AGI/SPIN_iter1: 1.0`, summing to 100k data.)
+- `output_dir`: the output directory of finetuned model and checkpoints. 
     - default: `outputs`
 - `per_device_train_batch_size`: batch size on one GPU.
     - default: 16

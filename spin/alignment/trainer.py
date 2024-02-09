@@ -1,3 +1,5 @@
+# Adapted from https://github.com/huggingface/alignment-handbook 
+
 import inspect
 import warnings
 from collections import defaultdict
@@ -196,7 +198,7 @@ class SPINTrainer(Trainer):
             # get peft model with the given config
             model = get_peft_model(model, peft_config)
 
-        # For models that use gradient_checkpoiting, we need to attach a hook that enables input
+        # For models that use gradient_checkpointing, we need to attach a hook that enables input
         # to explicitly have `requires_grad=True`, otherwise training will either silently
         # fail or completely fail.
         elif getattr(args, "gradient_checkpointing", False):
