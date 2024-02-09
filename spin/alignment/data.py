@@ -31,9 +31,9 @@ def apply_chat_template(
         rejected_messages = example["generated"][1:]
         example["text_chosen"] = tokenizer.apply_chat_template(chosen_messages, tokenize=False)
         example["text_rejected"] = tokenizer.apply_chat_template(rejected_messages, tokenize=False)
-        # example["text_prompt"] = tokenizer.apply_chat_template(
-        #     prompt_messages, tokenize=False, add_generation_prompt=True
-        # )
+        example["text_prompt"] = tokenizer.apply_chat_template(
+            prompt_messages, tokenize=False, add_generation_prompt=True
+        )
         example["text_chosen"] = _strip_prefix(example["text_chosen"], assistant_prefix)
         example["text_rejected"] = _strip_prefix(example["text_rejected"], assistant_prefix)
     else:
