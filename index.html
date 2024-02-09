@@ -153,7 +153,7 @@
     <h2 class="title is-3"> </h2>
     <h2 class="title is-3">Self-Play Fine-Tuning (SPIN)</h2>
     <p align="center">
-      <img src="images/spin_dalle.png" width="200" height="200"/>
+      <img src="images/spin_dalle.png" width="250" height="250"/>
     </p>
   </div>
 </div>
@@ -220,7 +220,15 @@
         <h2 class="subtitle has-text-centered">
           Average score of SPIN at different iterations on the HuggingFace Open LLM leaderboard.
         </h2>
-      </div>
+       </div>
+       <div class="item">
+        <!-- Your image here -->
+        <img src="static/images/tab.png"/>
+        <h2 class="subtitle has-text-centered">
+          Test performance of SPIN based on zephyr-7b-sft-full across HuggingFace Open LLM Leaderboard datasets. 
+          We also denote the average improvement over last iteration in the Average column.
+        </h2>
+       </div>
       <div class="item">
         <!-- Your image here -->
         <img src="images/dpo_compare.png"/>
@@ -228,6 +236,67 @@
           Performance comparison with DPO training across the six benchmark datasets. 
           SPIN at iteration 0 achieves comparable performance to DPO training with 62k new data. 
           At iteration 1, SPIN has already surpassed DPO training on the majority of datasets.
+        </h2>
+      </div>
+    </div>
+  </div>
+</div>
+</div>
+</section>
+<!-- End image carousel -->
+
+<!-- Results. -->
+<div class="columns is-centered">
+  <div class="column is-three-fifths">
+    <h2 class="title is-3">Ablation Studies</h2>
+      <div class="content has-text-justified">
+        <p>
+          We examine the effect of synthetic dataset size and training epochs within an iteration. 
+          Our analysis demonstrates the effectiveness of the synthetic data used by SPIN compared to 
+          the SFT data, as well as the necessity of iterative training in SPIN. Furthermore, to comprehensively 
+          assess the performance improvements of SPIN, we perform additional evaluations on benchmark 
+          tasks distinct from those in the Open LLM leaderboard.
+        </p>
+    </div>
+  </div>
+</div>
+<!--/ Results. -->
+<!-- Image carousel -->
+<section class="hero is-small">
+  <div class="hero-body">
+    <div class="container">
+      <div id="results-carousel" class="carousel results-carousel">
+       <div class="item">
+        <!-- Your image here -->
+        <img src="static/images/ablation1.png"/>
+        <h2 class="subtitle has-text-centered">
+          The scaling effect of training size of SPIN compared to SFT on the average score of 
+          Open LLM Leaderboard. For SPIN, we consider training data of sizes 14k, 26k and 50k where 
+          the larger dataset contains the smaller dataset. The starting point for SPIN (with x-axis 0) is the 
+          zephyr-7b-sft-full checkpoint, which has been fine-tuned on Ultrachat200k for 1 epoch. We 
+          report the model performance trained for 1 epoch with SPIN on the varying sizes of dataset. We 
+          additionally compare with SFT, where we fine-tune Mistral-7B on Ultrachat200k for 3 consecutive 
+          epochs and report the model performance at the first epoch as the starting point (with x-axis 0).
+        </h2>
+       </div>
+       <div class="item">
+        <!-- Your image here -->
+        <img src="static/images/ablation2.png"/>
+        <h2 class="subtitle has-text-centered">
+          The SPIN training dynamics of zephyr-7b-sft-full on the 50k synthetic data with 
+          regard to the number of training epochs during iteration 0. We can observe that iterative training is 
+          pivotal as training for more epochs during iteration 0 reaches a limit and cannot surpass iteration 1.
+        </h2>
+       </div>
+      <div class="item">
+        <!-- Your image here -->
+        <img src="static/images/tab2.png"/>
+        <h2 class="subtitle has-text-centered">
+          Test performance on other reasoning benchmark datasets for SPIN at different iterations 
+          and zephyr-7b-sft-full. We report the average score for MT-Bench and the accuracy score for 
+          Big Bench datasets under standard few-shot CoT evaluation. On OpenBookQA, we report acc_norm 
+          with 1-shot example as similar to previous literature. As similar to Open LLM Leaderboard evaluation, 
+          we observe a steady improvement in performance on the other benchmark tasks, with no significant degradation.
         </h2>
       </div>
     </div>
