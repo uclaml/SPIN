@@ -86,7 +86,7 @@ The input data for our code is required to be of the same format where each data
                  {"role": "assistant", "content": <generation>}]
 }
 ```
-🔍 Note: During data generation, the content for rejected response can be empty, as we only uses prompt to generate model responses. 
+🔍 Note: During data generation, the content for generated response can be empty, as we only uses prompt to generate model responses. 
 
 ### Model
 We also provide our model checkpoints at iteration 0,1,2,3 on HuggingFace.
