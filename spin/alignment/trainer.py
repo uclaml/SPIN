@@ -95,7 +95,7 @@ class SPINTrainer(Trainer):
         generate_during_eval (`bool`, defaults to `False`):
             Whether to sample and log generations during evaluation step.
         compute_metrics (`Callable[[EvalPrediction], Dict]`, *optional*):
-            The function to use to compute the metrics. Must take a `EvalPrediction` and return
+            The function to use to compute the metrics. Must take an `EvalPrediction` and return
             a dictionary string to metric values.
         model_init_kwargs: (`Optional[Dict]`, *optional*):
             Dict of Optional kwargs to pass when instantiating the model from a string
