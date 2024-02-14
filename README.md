@@ -17,8 +17,9 @@ Authors: [Zixiang Chen](https://sites.google.com/view/zxchen)\*, [Yihe Deng](htt
 
 
 ## 🔔 News 
-- **[01/02/2024]** Our paper is released on arXiv: https://arxiv.org/abs/2401.01335.
+- **[02/13/2024]** We updated our arXiv v2: https://arxiv.org/abs/2401.01335.
 - **[02/09/2024]** Our code is open-sourced!
+- **[01/02/2024]** Our paper is released on arXiv: https://arxiv.org/abs/2401.01335.
 
 
 ## Table of Contents
