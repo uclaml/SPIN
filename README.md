@@ -28,7 +28,7 @@ Authors: [Zixiang Chen](https://sites.google.com/view/zxchen)\*, [Yihe Deng](htt
     - [Model](#Model)
 - [Usage](#Usage)
     - [Step 1: Generation](#step-1-generation)
-        - [Faster generation with vLLM](#faster-generation-with-vllm-🚀)
+        - [Faster generation with vLLM](#🚀-faster-generation-with-vllm)
     - [Step 1.5: Gather generations and convert data type](#step-15-gather-generations-and-convert-data-type)
     - [Step 2: Fine-tuning](#step-2-fine-tuning)
 - [Citation](#Citation)
@@ -153,7 +153,7 @@ The following code generates 8k synthetic data for iteration 1.
 bash scripts/generate.sh
 ``` 
 
-#### Faster generation with vLLM 🚀
+#### 🚀 Faster generation with vLLM
 Alternatively, you could use the following example script to generate LLM responses with speedup.
 ```
 bash scripts/generate_vllm.sh
