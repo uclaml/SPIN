@@ -79,6 +79,7 @@ extras["dev"] = extras["docs"] + extras["quality"] + extras["tests"]
 
 # core dependencies shared across the whole project - keep this to a bare minimum :)
 install_requires = [
+    deps["vllm"],
     deps["accelerate"],
     deps["bitsandbytes"],
     deps["einops"],

@@ -21,34 +21,16 @@ def parse_arguments():
     parser.add_argument('--data_frac', type=int, default=0)
     parser.add_argument('--frac_len', type=int, default=0)
     parser.add_argument('--output_dir', type=str, default='generated/iter1')
-    parser.add_argument('--batch_size', type=int, default=8)
+    parser.add_argument('--world_size', type=int, default=8) # controls the number of gpus vLLM is allowed to use
     parser.add_argument('--input_dir', type=str, default='UCLA-AGI/SPIN_iter0')
     parser.add_argument('--split', type=str, default='train')
     return parser.parse_args()
-
-def prepare_prompts(prompts, tokenizer, batch_size=4):
-    """Prepare prompts for tokenization."""
-    batches=[prompts[i:i + batch_size] for i in range(0, len(prompts), batch_size)]  
-    batches_tok=[]
-    tokenizer.padding_side="left"     
-    for prompt_batch in batches:
-        batches_tok.append(
-            tokenizer(
-                prompt_batch, 
-                return_tensors="pt", 
-                padding='longest', 
-                truncation=False, 
-                pad_to_multiple_of=8,
-                add_special_tokens=False).to("cuda") 
-            )
-    tokenizer.padding_side="right"
-    return batches_tok
 
 def main():
     args = parse_arguments()
     model_path = args.model
     data_frac = args.data_frac
-    batch_size = args.batch_size
+    world_size = args.world_size
     output_dir = Path(args.output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
 
@@ -58,10 +40,10 @@ def main():
 
     llm = LLM(
         model=model_path,
-        tensor_parallel_size=batch_size,
+        tensor_parallel_size=world_size,
     )
 
-    sampling_params = SamplingParams(temperature=0.8, top_p=0.95, max_tokens=256)
+    sampling_params = SamplingParams(temperature=1.0, top_p=1.0, max_tokens=256)
 
     # load data
     data = load_dataset(args.input_dir, split=args.split)
