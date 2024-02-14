@@ -26,24 +26,6 @@ def parse_arguments():
     parser.add_argument('--split', type=str, default='train')
     return parser.parse_args()
 
-def prepare_prompts(prompts, tokenizer, batch_size=4):
-    """Prepare prompts for tokenization."""
-    batches=[prompts[i:i + batch_size] for i in range(0, len(prompts), batch_size)]  
-    batches_tok=[]
-    tokenizer.padding_side="left"     
-    for prompt_batch in batches:
-        batches_tok.append(
-            tokenizer(
-                prompt_batch, 
-                return_tensors="pt", 
-                padding='longest', 
-                truncation=False, 
-                pad_to_multiple_of=8,
-                add_special_tokens=False).to("cuda") 
-            )
-    tokenizer.padding_side="right"
-    return batches_tok
-
 def main():
     args = parse_arguments()
     model_path = args.model
