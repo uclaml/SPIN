@@ -18,6 +18,7 @@ Authors: [Zixiang Chen](https://sites.google.com/view/zxchen)\*, [Yihe Deng](htt
 
 ## 🔔 News 
 - **[01/02/2024]** Our paper is released on arXiv: https://arxiv.org/abs/2401.01335.
+- **[02/09/2024]** Our code is open-sourced!
 
 
 ## Table of Contents
@@ -27,6 +28,7 @@ Authors: [Zixiang Chen](https://sites.google.com/view/zxchen)\*, [Yihe Deng](htt
     - [Model](#Model)
 - [Usage](#Usage)
     - [Step 1: Generation](#step-1-generation)
+        - [Faster generation with vLLM](#faster-generation-with-vllm-🚀)
     - [Step 1.5: Gather generations and convert data type](#step-15-gather-generations-and-convert-data-type)
     - [Step 2: Fine-tuning](#step-2-fine-tuning)
 - [Citation](#Citation)
@@ -145,11 +147,18 @@ The generated data is in json format where each data contains the following attr
 }
 ```
 
-#### Example
+__Example__. 
 The following code generates 8k synthetic data for iteration 1.
 ```
 bash scripts/generate.sh
 ``` 
+
+#### Faster generation with vLLM 🚀
+Alternatively, you could use the following example script to generate LLM responses with speedup.
+```
+bash scripts/generate_vllm.sh
+```  
+Thanks to @sumo43 for implementing vLLM for generation. 
 
 ### Step 1.5: Gather generations and convert data type
 ```
@@ -164,7 +173,7 @@ The code will generate the two final data files including `train_prefs-00000-of-
 
 Note: make sure to collect the generated data filed into the same directory of `--input_dir`. 
 
-#### Example
+__Example__.
 ```
 python spin/convert_data.py --output_dir new_data/iter0 --input_dir generated/iter0 --num_fracs 63
 ```
@@ -194,7 +203,7 @@ You might need to change the configuration in `configs/config.yaml`. Here are so
 
 In our experiments, we do full fine-tuning on a multi-GPU machine with DeepSpeed ZeRO-3 (requires A100 (80GB)).
 
-#### Examples
+__Example__.
 ```
 bash scripts/finetune.sh
 ```
