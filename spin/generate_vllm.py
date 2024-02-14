@@ -63,8 +63,7 @@ def main():
         tensor_parallel_size=world_size,
     )
 
-    # default params
-    sampling_params = SamplingParams(temperature=1.0, top_p=1.0, max_tokens=256)
+    sampling_params = SamplingParams(temperature=0.8, top_p=0.95, max_tokens=256)
 
     # load data
     data = load_dataset(args.input_dir, split=args.split)
