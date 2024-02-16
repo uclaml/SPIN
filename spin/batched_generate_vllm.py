@@ -15,7 +15,7 @@ from vllm import LLM, SamplingParams
 
 
 def parse_arguments():
-    parser = argparse.ArgumentParser(description="Script to generate text using a vLLM")
+    parser = argparse.ArgumentParser(description="Script to generate text using vLLM")
 
     parser.add_argument(
         "--model", type=str, default="UCLA-AGI/zephyr-7b-sft-full-SPIN-iter0"
@@ -41,11 +41,9 @@ def run_process_on_gpu(
     model_path, input_dir, frac_len, world_size, output_dir, split, gpu_queue, data_frac
 ):
     gpu_id = gpu_queue.get()
-    # torch.cuda.set_device(gpu_id)
     os.environ["CUDA_VISIBLE_DEVICES"] = str(gpu_id)
     print(f"Running on GPU: {gpu_id}")
     # Assuming the existence of a function that handles the generation process for a single GPU
-    # This function should be defined elsewhere in the script
     generate_on_single_gpu(
         model_path, input_dir, frac_len, data_frac, world_size, output_dir, split
     )
@@ -55,6 +53,8 @@ def run_process_on_gpu(
 def generate_on_single_gpu(
     model_path, input_dir, frac_len, data_frac, world_size, output_dir, split
 ):
+    # TODO: the generation can be decoupled to use async engine and multiple clients
+    # to accelerate, which will amortize the loading time
     output_dir = Path(output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
     print(f"Generating on GPU with data fraction {data_frac}...")
@@ -185,6 +185,7 @@ def main():
             for res in res_futs:
                 res.get()
     print(f"finished generating in {time.time() - start:.2f}s")
+
 
 if __name__ == "__main__":
     main()
