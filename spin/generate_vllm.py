@@ -54,6 +54,8 @@ def main():
             data = data[sub_len*data_frac:]['real']
         else:
             data = data[sub_len*data_frac:sub_len*(data_frac+1)]['real']
+    else:
+        data = data[:]['real']
 
     prompts_all = ["### Instruction: " + data[idx][0]['content'] + "\n\n### Response: " for idx in range(len(data))]
     prompts_old = [data[idx][0]['content'] for idx in range(len(data))]
