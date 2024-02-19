@@ -148,8 +148,10 @@ The generated data is in json format where each data contains the following attr
 }
 ```
 
+**Note**: the iteration number for data generation solely depends on which model is used for generation (e.g. use original SFT model for iter0 data generation and SPIN iter0 model for iter1 data generation). The `generate.py` script will only use the prompts/questions for the data model.  
+
 __Example__. 
-The following code generates 8k synthetic data for iteration 1.
+The following code generates 8k synthetic data for iteration 0.
 ```
 bash scripts/generate.sh
 ``` 
