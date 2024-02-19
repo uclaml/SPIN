@@ -157,7 +157,7 @@ bash scripts/generate.sh
 ``` 
 
 #### 🚀 Faster generation with vLLM
-Alternatively, you could use the following example script to generate LLM responses with speedup.
+Alternatively, you could use the following example script to generate LLM responses with speedup. Larger `frac_len` can be used with vllm.
 ```
 bash scripts/generate_vllm.sh
 ```  
