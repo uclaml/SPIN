@@ -30,7 +30,8 @@ if stale_egg_info.exists():
 # IMPORTANT: all dependencies should be listed here with their version requirements, if any.
 #   * If a dependency is fast-moving (e.g. transformers), pin to the exact version
 _deps = [
-    "vllm",
+    "vllm==0.3.0",
+    "ray==2.9.0",
     "accelerate==0.23.0",
     "bitsandbytes==0.41.2.post2",
     "black==23.1.0",
