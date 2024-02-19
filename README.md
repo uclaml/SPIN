@@ -35,6 +35,8 @@ Authors: [Zixiang Chen](https://sites.google.com/view/zxchen)\*, [Yihe Deng](htt
 - [Citation](#Citation)
 - [Acknowledgement](#Acknowledgement)
 
+🔍 __Note__: <span style="color:red;">With our provided data, you can directly jump to [Step 2: Fine-tuning](#step-2-fine-tuning) without doing data generation on your own. You may also start from any iteration to reproduce our results using our open-sourced model checkpoints.</span>
+
 ## 🌀 About SPIN
 **SPIN** utilizes a self-play mechanism, allowing an LLM to improve itself by playing against its previous iterations, without needing additional human-annotated preference data than the SFT dataset itself. More specifically, the LLM generates its own training data from its previous iterations, refining its policy by discerning these self-generated responses from the original SFT data. 
 <p align="center">
