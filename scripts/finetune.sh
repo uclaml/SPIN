@@ -18,4 +18,4 @@ ACCELERATE_LOG_LEVEL=info
 # --output_dir="${path_to_save_checkpoint}": Directory where training checkpoints will be saved.
 # Execution command: Runs 'spin/run_spin.py' with 'configs/config.yaml' as its configuration.
 
-accelerate launch --config_file configs/deepspeed_zero3.yaml --num_processes=8 --main_process_port 2950 spin/run_spin.py configs/config.yaml
+accelerate launch --config_file configs/deepspeed_zero3.yaml --num_processes=8 --main_process_port 2950 spin/run_spin.py configs/config.yaml --num_train_epochs=6
