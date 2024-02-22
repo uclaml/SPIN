@@ -21,6 +21,8 @@ Authors: [Zixiang Chen](https://sites.google.com/view/zxchen)\*, [Yihe Deng](htt
 - **[02/09/2024]** Our code is open-sourced!
 - **[01/02/2024]** Our paper is released on arXiv: https://arxiv.org/abs/2401.01335.
 
+❗ __Note__: We notice that [Alignment Handbook](https://github.com/huggingface/alignment-handbook) has updated their configuration and SFT checkpoint since our experiments. The configuration and SFT model from the Alignment Handbook that we used in our experiments for data generation and fine-tuning are the older version ([Config](https://github.com/huggingface/alignment-handbook/blob/61a11a5c7d66179ed0a930b0dd12e532fce701dd/recipes/zephyr-7b-beta/dpo/config_full.yaml), [Model](https://huggingface.co/alignment-handbook/zephyr-7b-sft-full/tree/ac6e600eefcce74f5e8bae1035d4f66019e93190)). The model checkpoint on HuggingFace (alignment-handbook/zephyr-7b-sft-full) has been updated once with the new config. If you wish to use the newest SFT model, you need to generate your own data instead of using the [datasets](https://huggingface.co/collections/UCLA-AGI/datasets-spin-65c3624e98d4b589bbc76f3a) we provided on hugginface.
+
 
 ## Table of Contents
 - [About SPIN](#🌀-about-spin)
@@ -32,10 +34,11 @@ Authors: [Zixiang Chen](https://sites.google.com/view/zxchen)\*, [Yihe Deng](htt
         - [Faster generation with vLLM](#🚀-faster-generation-with-vllm)
     - [Step 1.5: Gather generations and convert data type](#step-15-gather-generations-and-convert-data-type)
     - [Step 2: Fine-tuning](#step-2-fine-tuning)
+- [Evaluation](#Evaluation)
 - [Citation](#Citation)
 - [Acknowledgement](#Acknowledgement)
 
-🔍 __Note__: <span style="color:red;">With our provided data, you can directly jump to [Step 2: Fine-tuning](#step-2-fine-tuning) without doing data generation on your own. You may also start from any iteration to reproduce our results using our open-sourced model checkpoints.</span>
+
 
 ## 🌀 About SPIN
 **SPIN** utilizes a self-play mechanism, allowing an LLM to improve itself by playing against its previous iterations, without needing additional human-annotated preference data than the SFT dataset itself. More specifically, the LLM generates its own training data from its previous iterations, refining its policy by discerning these self-generated responses from the original SFT data. 
@@ -212,6 +215,9 @@ __Example__.
 ```
 bash scripts/finetune.sh
 ```
+
+## Evaluation
+For our evaluation on the Open LLM Leaderboard, please use the [lm-evaluation-harness](https://github.com/EleutherAI/lm-evaluation-harness) repository at v0.4.0. Also, note that we set the number of few shot examples to be the same as instructed on the [Leaderboard](https://huggingface.co/spaces/HuggingFaceH4/open_llm_leaderboard). Different evaluation versions results in different scores, but the trend will remain the same.
 
 ## Citation
 If you find this repo useful for your research, please consider citing the paper
