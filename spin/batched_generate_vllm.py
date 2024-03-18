@@ -3,6 +3,7 @@ import json
 import multiprocessing as mp
 import os
 import time
+import ray
 from functools import partial
 from pathlib import Path
 
@@ -36,22 +37,32 @@ def parse_arguments():
     return parser.parse_args()
 
 
-# NOTE: `gpu_queue, data_frac` needs to be at the end (others handled by partial)
+# NOTE: `gpu_queue, task_queue` needs to be at the end (others handled by partial)
 def run_process_on_gpu(
-    model_path, input_dir, frac_len, world_size, output_dir, split, gpu_queue, data_frac
+    model_path, input_dir, frac_len, world_size, output_dir, split, gpu_queue, task_queue
 ):
-    gpu_id = gpu_queue.get()
-    os.environ["CUDA_VISIBLE_DEVICES"] = str(gpu_id)
-    print(f"Running on GPU: {gpu_id}")
-    # Assuming the existence of a function that handles the generation process for a single GPU
-    generate_on_single_gpu(
-        model_path, input_dir, frac_len, data_frac, world_size, output_dir, split
+    gpu_ids = [gpu_queue.get() for _ in range(world_size)]
+    os.environ["CUDA_VISIBLE_DEVICES"] = ",".join([str(gpu_id) for gpu_id in gpu_ids])
+    print(f"Running on GPU: {gpu_ids}")
+    print(f"CUDA_VISIBLE_DEVICES: {os.environ['CUDA_VISIBLE_DEVICES']}")
+    llm = LLM(
+        model=model_path,
+        tensor_parallel_size=world_size,
     )
-    gpu_queue.put(gpu_id)
+    # Assuming the existence of a function that handles the generation process for a single GPU
+    while not task_queue.empty():
+        data_frac = task_queue.get()
+        generate_on_single_gpu(
+            model_path, input_dir, frac_len, data_frac, world_size, output_dir, split, llm
+        )
+        task_queue.task_done()
+    for gpu_id in gpu_ids:
+        gpu_queue.put(gpu_id)
+    ray.shutdown()
 
 
 def generate_on_single_gpu(
-    model_path, input_dir, frac_len, data_frac, world_size, output_dir, split
+    model_path, input_dir, frac_len, data_frac, world_size, output_dir, split, llm
 ):
     # TODO: the generation can be decoupled to use async engine and multiple clients
     # to accelerate, which will amortize the loading time
@@ -61,11 +72,6 @@ def generate_on_single_gpu(
     # load a base model and tokenizer
     tokenizer = AutoTokenizer.from_pretrained(model_path)
     tokenizer.pad_token = tokenizer.eos_token
-
-    llm = LLM(
-        model=model_path,
-        tensor_parallel_size=world_size,
-    )
 
     sampling_params = SamplingParams(temperature=1.0, top_p=1.0, max_tokens=256)
 
@@ -96,7 +102,7 @@ def generate_on_single_gpu(
     results = [r.replace("</s>", "").lstrip() for r in results_gathered]
 
     timediff = time.time() - start
-    print(f"time elapsed: {timediff}")
+    print(f"time elapsed: {timediff:.2f}s")
 
     # collecting data
     for idx in range(len(corrects_all)):
@@ -153,11 +159,17 @@ def main():
     # Create a pool of processes. Each process will run on a separate GPU.
     with mp.Manager() as manager:
         gpu_queue = manager.Queue()  # Create a Manager Queue
+        task_queue = manager.Queue()  # Create a Task Queue
         # Add gpu_id to the queue
         for i in range(num_gpus):
             gpu_queue.put(i)
+        
+        # add fraction task into task queue
+        for i in range(args.num_data_frac):
+            task_queue.put(i)
 
-        with mp.Pool(processes=num_gpus) as pool:
+        num_workers = num_gpus//args.tp_per_worker
+        with mp.Pool(processes=num_workers) as pool:
             # Partial function with all arguments except the one that changes per process (data_frac)
             func = partial(
                 run_process_on_gpu,
@@ -171,13 +183,13 @@ def main():
 
             # for each data_frac, scheduling one task
             res_futs = []
-            for data_frac in range(args.num_data_frac):
+            for _ in range(num_workers):
                 res_futs.append(
                     pool.apply_async(
                         func,
                         (
                             gpu_queue,
-                            data_frac,
+                            task_queue,
                         ),
                     )
                 )

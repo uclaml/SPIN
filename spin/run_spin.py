@@ -144,7 +144,6 @@ def main():
     if model_args.use_peft is True:
         ref_model = None
         ref_model_kwargs = None
-
     #########################
     # Instantiate spin trainer
     #########################

@@ -9,10 +9,12 @@ from typing import Any, Callable, Dict, List, Literal, Optional, Tuple, Union
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+from accelerate import init_empty_weights, load_checkpoint_and_dispatch
 from accelerate.utils import is_deepspeed_available
 from datasets import Dataset
 from torch.utils.data import DataLoader
 from transformers import (
+    AutoConfig, 
     AutoModelForCausalLM,
     DataCollator,
     PreTrainedModel,
@@ -155,13 +157,6 @@ class SPINTrainer(Trainer):
             )
             model = AutoModelForCausalLM.from_pretrained(model, **model_init_kwargs)
 
-        if isinstance(ref_model, str):
-            warnings.warn(
-                "You passed a ref model_id to the SPINTrainer. This will automatically create an "
-                "`AutoModelForCausalLM`"
-            )
-            ref_model = AutoModelForCausalLM.from_pretrained(ref_model, **ref_model_init_kwargs)
-
         if not is_peft_available() and peft_config is not None:
             raise ValueError(
                 "PEFT is not installed and you passed a `peft_config` in the trainer's kwargs, please install it to use the PEFT models"
@@ -227,13 +222,6 @@ class SPINTrainer(Trainer):
 
         self.is_peft_model = is_peft_available() and isinstance(model, PeftModel)
 
-        if ref_model:
-            self.ref_model = ref_model
-        elif self.is_peft_model:
-            # The `model` with adapters turned off will be used as the reference model
-            self.ref_model = None
-        else:
-            self.ref_model = create_reference_model(model)
 
         if data_collator is None:
             if tokenizer is None:
@@ -289,8 +277,6 @@ class SPINTrainer(Trainer):
 
         if disable_dropout:
             disable_dropout_in_model(model)
-            if self.ref_model is not None:
-                disable_dropout_in_model(self.ref_model)
 
         self.max_length = max_length
         self.generate_during_eval = generate_during_eval
@@ -321,6 +307,21 @@ class SPINTrainer(Trainer):
                 "Your `Trainer` does not have an `accelerator` object. Consider upgrading `transformers`."
             )
 
+        if isinstance(ref_model, str):
+            warnings.warn(
+                "You passed a ref model_id to the SPINTrainer. This will automatically create an "
+                "`AutoModelForCausalLM`"
+            )
+            ref_model = AutoModelForCausalLM.from_pretrained(ref_model, **ref_model_init_kwargs)
+
+        if ref_model:
+            self.ref_model = ref_model
+        elif self.is_peft_model:
+            # The `model` with adapters turned off will be used as the reference model
+            self.ref_model = None
+        else:
+            self.ref_model = create_reference_model(model)
+
         if self.ref_model is None:
             if not hasattr(self.accelerator.unwrap_model(self.model), "disable_adapter"):
                 raise ValueError(
@@ -331,6 +332,10 @@ class SPINTrainer(Trainer):
                 self.ref_model = self._prepare_deepspeed(self.ref_model)
             else:
                 self.ref_model = self.accelerator.prepare_model(self.ref_model, evaluation_mode=True)
+
+        if disable_dropout and self.ref_model is not None:
+            disable_dropout_in_model(self.ref_model)
+
 
     def _prepare_deepspeed(self, model: PreTrainedModelWrapper):
         # Adapted from accelerate: https://github.com/huggingface/accelerate/blob/739b135f8367becb67ffaada12fe76e3aa60fefd/src/accelerate/accelerator.py#L1473
