@@ -155,7 +155,8 @@ class SPINTrainer(Trainer):
                 "You passed a model_id to the SPINTrainer. This will automatically create an "
                 "`AutoModelForCausalLM` or a `PeftModel` (if you passed a `peft_config`) for you."
             )
-            model = AutoModelForCausalLM.from_pretrained(model, **model_init_kwargs)
+            with deepspeed.zero.Init():
+                model = AutoModelForCausalLM.from_pretrained(model, **model_init_kwargs)
 
         if not is_peft_available() and peft_config is not None:
             raise ValueError(
@@ -312,7 +313,8 @@ class SPINTrainer(Trainer):
                 "You passed a ref model_id to the SPINTrainer. This will automatically create an "
                 "`AutoModelForCausalLM`"
             )
-            ref_model = AutoModelForCausalLM.from_pretrained(ref_model, **ref_model_init_kwargs)
+            with deepspeed.zero.Init():
+                ref_model = AutoModelForCausalLM.from_pretrained(ref_model, **ref_model_init_kwargs)
 
         if ref_model:
             self.ref_model = ref_model
