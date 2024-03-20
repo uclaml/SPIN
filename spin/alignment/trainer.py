@@ -155,8 +155,8 @@ class SPINTrainer(Trainer):
                 "You passed a model_id to the SPINTrainer. This will automatically create an "
                 "`AutoModelForCausalLM` or a `PeftModel` (if you passed a `peft_config`) for you."
             )
-            with deepspeed.zero.Init():
-                model = AutoModelForCausalLM.from_pretrained(model, **model_init_kwargs)
+            # with deepspeed.zero.Init():
+            model = AutoModelForCausalLM.from_pretrained(model, **model_init_kwargs)
 
         if not is_peft_available() and peft_config is not None:
             raise ValueError(
@@ -313,8 +313,8 @@ class SPINTrainer(Trainer):
                 "You passed a ref model_id to the SPINTrainer. This will automatically create an "
                 "`AutoModelForCausalLM`"
             )
-            with deepspeed.zero.Init():
-                ref_model = AutoModelForCausalLM.from_pretrained(ref_model, **ref_model_init_kwargs)
+            # with deepspeed.zero.Init():
+            ref_model = AutoModelForCausalLM.from_pretrained(ref_model, **ref_model_init_kwargs)
 
         if ref_model:
             self.ref_model = ref_model
@@ -450,6 +450,15 @@ class SPINTrainer(Trainer):
         real_rewards = self.beta * (policy_real_logps - opponent_real_logps).detach()
         generated_rewards = self.beta * (policy_generated_logps - opponent_generated_logps).detach()
 
+        print(f"losses: {losses}")
+        print(f"policy_real_logps: {policy_real_logps}")
+        print(f"policy_generated_logps: {policy_generated_logps}")
+        print(f"opponent_real_logps: {opponent_real_logps}")
+        print(f"opponent_generated_logps: {opponent_generated_logps}")
+        print(f"logits: {logits}")
+        print(f"real_rewards: {real_rewards}")
+        print(f"generated_rewards: {generated_rewards}")
+        
         return losses, real_rewards, generated_rewards
 
     def _get_batch_logps(
@@ -546,7 +555,6 @@ class SPINTrainer(Trainer):
                 _,
                 _,
             ) = self.concatenated_forward(self.ref_model, batch)
-
         losses, real_rewards, generated_rewards = self.spin_loss(
             policy_real_logps,
             policy_generated_logps,

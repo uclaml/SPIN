@@ -26,8 +26,8 @@ learning_rate: 5.0e-7
 log_level: info
 logging_steps: 10
 lr_scheduler_type: linear
-max_length: 8192
-max_prompt_length: 4096
+max_length: 4096
+max_prompt_length: 2048
 num_train_epochs: 3
 optim: rmsprop
 output_dir: outputs
