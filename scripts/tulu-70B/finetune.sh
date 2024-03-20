@@ -13,8 +13,8 @@ WORKER_NUM_GPU=${4:-8}
 WORKER_0_PORT=${5:-2950}
 WORKER_0_HOST=${6:-"127.0.0.1"}
 
-TRAIN_BATCH_SIZE=${7:-1}
-EVAL_BATCH_SIZE=${8:-1}
+TRAIN_BATCH_SIZE=${7:-8}
+EVAL_BATCH_SIZE=${8:-4}
 
 # Launches a distributed training job with the `accelerate` CLI tool. Key parameters include:
 # --config_file: Path to the DeepSpeed configuration file. This file defines distributed training options and optimizations.
