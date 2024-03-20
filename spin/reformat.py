@@ -27,6 +27,23 @@ def load_and_process_data_ultrachat(dataset_name, split):
         logging.error(f"Error loading or processing dataset: {e}")
         return []
 
+def load_and_process_data_tulu(dataset_name, input_split, test_split: float=0.1):
+    try:
+        dataset = load_dataset(dataset_name, split=input_split)
+        dataset = dataset.train_test_split(test_size=test_split)
+        reformatted_train_data = [{
+            'generated': [message['messages'][0], {"role": "assistant", "content": ""}], 
+            'real': [message['messages'][0], message['messages'][1]]
+        } for message in dataset["train"]]
+        reformatted_test_data = [{
+            'generated': [message['messages'][0], {"role": "assistant", "content": ""}], 
+            'real': [message['messages'][0], message['messages'][1]]
+        } for message in dataset["test"]]
+        return reformatted_train_data, reformatted_test_data
+    except Exception as e:
+        logging.error(f"Error loading or processing dataset: {e}")
+        return []
+
 def save_to_json(data, path):
     try:
         with open(path, 'w') as f:
@@ -48,6 +65,10 @@ def main():
     if args.data == 'HuggingFaceH4/ultrachat_200k':
         train_data = load_and_process_data_ultrachat(args.data, 'train_sft')
         test_data = load_and_process_data_ultrachat(args.data, 'test_sft')
+    elif "tulu-v2-sft-mixture" in args.data:
+        train_data, test_data = load_and_process_data_tulu(args.data, 'train', test_split=0.1)
+    else:
+        raise ValueError(f"current {args.data} dataset is not supported")
 
     train_json_path = output_dir / 'train.json'
     test_json_path = output_dir / 'test.json'
