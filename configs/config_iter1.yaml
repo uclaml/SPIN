@@ -1,7 +1,7 @@
 # Model arguments
 # model_name_or_path: alignment-handbook/zephyr-7b-sft-full
 # model_revision: ac6e600eefcce74f5e8bae1035d4f66019e93190
-model_name_or_path: UCLA-AGI/zephyr-7b-sft-full-SPIN-iter0
+model_name_or_path: UCLA-AGI/zephyr-7b-sft-full-SPIN-iter0 # Change this to outputs/iter0-ckpt if trained by finetune.sh
 
 # Data training arguments
 dataset_mixer:
