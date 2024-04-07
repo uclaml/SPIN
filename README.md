@@ -36,7 +36,7 @@ Authors: [Zixiang Chen](https://sites.google.com/view/zxchen)\*, [Yihe Deng](htt
         - [Faster generation with vLLM](#🚀-faster-generation-with-vllm)
     - [Step 1.5: Gather generations and convert data type](#step-15-gather-generations-and-convert-data-type)
     - [Step 2: Fine-tuning](#step-2-fine-tuning)
-- [Reproducing Our Results](#Reproducing Our Results)
+- [Reproducing Our Results](#Reproducing-Our-Results)
 - [Evaluation](#Evaluation)
 - [Citation](#Citation)
 - [Acknowledgement](#Acknowledgement)
