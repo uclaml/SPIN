@@ -36,6 +36,7 @@ Authors: [Zixiang Chen](https://sites.google.com/view/zxchen)\*, [Yihe Deng](htt
         - [Faster generation with vLLM](#🚀-faster-generation-with-vllm)
     - [Step 1.5: Gather generations and convert data type](#step-15-gather-generations-and-convert-data-type)
     - [Step 2: Fine-tuning](#step-2-fine-tuning)
+- [Reproducing Our Results](#Reproducing Our Results)
 - [Evaluation](#Evaluation)
 - [Citation](#Citation)
 - [Acknowledgement](#Acknowledgement)
@@ -80,7 +81,7 @@ huggingface-cli login --token "${your_access_token}"
 ### Data 
 We provide the data used in our experiments along with the synthetic data we generated in this repo as well as on HuggingFace. These data are converted to .parquet format for fine-tuning. 
 
-❗ On 04/04/2024, we discovered that the dataset uploaded for SPIN_iter1 was incorrectly ordered. A corrected version has been re-uploaded.
+❗ On 04/04/2024, we've discovered that the datasets previously uploaded are incorrect. We've re-upload the corrected datasets.
 
 | Dataset                    |                           Download                           |
 | :----------------------- | :----------------------------------------------------------: |
@@ -223,10 +224,12 @@ bash scripts/finetune.sh
 
 To help reproducing our results, we have made available the scripts corresponding to all four iterations of our study. These scripts are pre-configured with the exact parameters and model versions used in our paper. For each iteration, the base model is initialized with the version released on 🤗 HuggingFace, which can be found at the following links:
 
-- [Iteration 0](https://huggingface.co/UCLA-AGI/zephyr-7b-sft-full-SPIN-iter0)
-- [Iteration 1](https://huggingface.co/UCLA-AGI/zephyr-7b-sft-full-SPIN-iter1)
-- [Iteration 2](https://huggingface.co/UCLA-AGI/zephyr-7b-sft-full-SPIN-iter2)
-- [Iteration 3](https://huggingface.co/UCLA-AGI/zephyr-7b-sft-full-SPIN-iter3)
+| Dataset                    |                           Download                           |
+| :----------------------- | :----------------------------------------------------------: |
+| SPIN_iter0     | 🤗 [HuggingFace](https://huggingface.co/datasets/UCLA-AGI/SPIN_iter0) |
+| SPIN_iter1 | 🤗 [HuggingFace](https://huggingface.co/datasets/UCLA-AGI/SPIN_iter1) |
+| SPIN_iter2      |   🤗 [HuggingFace](https://huggingface.co/datasets/UCLA-AGI/SPIN_iter2) |
+| SPIN_iter3      |   🤗 [HuggingFace](https://huggingface.co/datasets/UCLA-AGI/SPIN_iter3) |
 
 To execute the full pipeline using your locally trained models as the base, modify the `model_name_or_path` parameter in the configuration files to point to your model's path.
 
