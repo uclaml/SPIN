@@ -18,6 +18,7 @@ Authors: [Zixiang Chen](https://sites.google.com/view/zxchen)\*, [Yihe Deng](htt
 
 ## 🔔 News 
 - **[04/06/2024]** We released the training scripts to reproduce our results.
+- **[04/04/2024]** ❗ We've discovered that the datasets previously uploaded are incorrect. We've re-upload the corrected datasets.
 - **[02/13/2024]** We updated our arXiv v2: https://arxiv.org/abs/2401.01335.
 - **[02/09/2024]** Our code is open-sourced!
 - **[01/02/2024]** Our paper is released on arXiv: https://arxiv.org/abs/2401.01335.
@@ -77,7 +78,9 @@ huggingface-cli login --token "${your_access_token}"
 ```
 
 ### Data 
-We provide the data used in our experiments along with the synthetic data we generated in this repo as well as on HuggingFace. These data is converted to .parquet format for fine-tuning. 
+We provide the data used in our experiments along with the synthetic data we generated in this repo as well as on HuggingFace. These data are converted to .parquet format for fine-tuning. 
+
+❗ On 04/04/2024, we discovered that the dataset uploaded for SPIN_iter1 was incorrectly ordered. A corrected version has been re-uploaded.
 
 | Dataset                    |                           Download                           |
 | :----------------------- | :----------------------------------------------------------: |
@@ -216,15 +219,7 @@ __Example__.
 ```
 bash scripts/finetune.sh
 ```
-__Reproducing Our Results__.
-We release the script for all 4 iterations of our results, with parameters and model versions set exactly as that in our paper. In the provided script, the base model at the start of iteration are set to be the relased model at 🤗 [HuggingFace](https://huggingface.co/UCLA-AGI/zephyr-7b-sft-full-SPIN-iter0), 🤗 [HuggingFace](https://huggingface.co/UCLA-AGI/zephyr-7b-sft-full-SPIN-iter1), 🤗 [HuggingFace](https://huggingface.co/UCLA-AGI/zephyr-7b-sft-full-SPIN-iter2), and 🤗 [HuggingFace](https://huggingface.co/UCLA-AGI/zephyr-7b-sft-full-SPIN-iter3). If you want to try a full pipeline, replace the base model in the config files model_name_or_path to your local trained model.
-```
-bash scripts/finetune.sh
-bash scripts/finetune_iter1.sh
-bash scripts/finetune_iter2.sh
-bash scripts/finetune_iter3.sh
-```
-
+## Reproducing Our Results
 
 To help reproducing our results, we have made available the scripts corresponding to all four iterations of our study. These scripts are pre-configured with the exact parameters and model versions used in our paper. For each iteration, the base model is initialized with the version released on 🤗 HuggingFace, which can be found at the following links:
 
