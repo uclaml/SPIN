@@ -17,6 +17,7 @@ Authors: [Zixiang Chen](https://sites.google.com/view/zxchen)\*, [Yihe Deng](htt
 
 
 ## 🔔 News 
+- **[04/06/2024]** We released the training scripts to reproduce our results.
 - **[02/13/2024]** We updated our arXiv v2: https://arxiv.org/abs/2401.01335.
 - **[02/09/2024]** Our code is open-sourced!
 - **[01/02/2024]** Our paper is released on arXiv: https://arxiv.org/abs/2401.01335.
@@ -215,6 +216,37 @@ __Example__.
 ```
 bash scripts/finetune.sh
 ```
+__Reproducing Our Results__.
+We release the script for all 4 iterations of our results, with parameters and model versions set exactly as that in our paper. In the provided script, the base model at the start of iteration are set to be the relased model at 🤗 [HuggingFace](https://huggingface.co/UCLA-AGI/zephyr-7b-sft-full-SPIN-iter0), 🤗 [HuggingFace](https://huggingface.co/UCLA-AGI/zephyr-7b-sft-full-SPIN-iter1), 🤗 [HuggingFace](https://huggingface.co/UCLA-AGI/zephyr-7b-sft-full-SPIN-iter2), and 🤗 [HuggingFace](https://huggingface.co/UCLA-AGI/zephyr-7b-sft-full-SPIN-iter3). If you want to try a full pipeline, replace the base model in the config files model_name_or_path to your local trained model.
+```
+bash scripts/finetune.sh
+bash scripts/finetune_iter1.sh
+bash scripts/finetune_iter2.sh
+bash scripts/finetune_iter3.sh
+```
+
+
+To help reproducing our results, we have made available the scripts corresponding to all four iterations of our study. These scripts are pre-configured with the exact parameters and model versions used in our paper. For each iteration, the base model is initialized with the version released on 🤗 HuggingFace, which can be found at the following links:
+
+- [Iteration 0](https://huggingface.co/UCLA-AGI/zephyr-7b-sft-full-SPIN-iter0)
+- [Iteration 1](https://huggingface.co/UCLA-AGI/zephyr-7b-sft-full-SPIN-iter1)
+- [Iteration 2](https://huggingface.co/UCLA-AGI/zephyr-7b-sft-full-SPIN-iter2)
+- [Iteration 3](https://huggingface.co/UCLA-AGI/zephyr-7b-sft-full-SPIN-iter3)
+
+To execute the full pipeline using your locally trained models as the base, modify the `model_name_or_path` parameter in the configuration files to point to your model's path.
+
+To start the full fine-tuning process, run the corresponding script from your terminal:
+
+```bash
+bash scripts/finetune.sh
+bash scripts/finetune_iter1.sh
+bash scripts/finetune_iter2.sh
+bash scripts/finetune_iter3.sh
+```
+
+By following these steps, you should be able to reproduce our results.
+
+---
 
 ## Evaluation
 For our evaluation on the Open LLM Leaderboard, please use the [lm-evaluation-harness](https://github.com/EleutherAI/lm-evaluation-harness) repository at v0.4.0. Also, note that we set the number of few shot examples to be the same as instructed on the [Leaderboard](https://huggingface.co/spaces/HuggingFaceH4/open_llm_leaderboard). Different evaluation versions results in different scores, but the trend will remain the same.
