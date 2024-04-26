@@ -30,6 +30,7 @@ from trl.models import PreTrainedModelWrapper, create_reference_model
 from trl.trainer.utils import disable_dropout_in_model, pad_to_length
 
 from .utils import DataCollatorWithPadding
+from contextlib import contextmanager, nullcontext
 
 
 if is_peft_available():
@@ -137,6 +138,8 @@ class SPINTrainer(Trainer):
         compute_metrics: Optional[Callable[[EvalLoopOutput], Dict]] = None,
         model_init_kwargs: Optional[Dict] = None,
         ref_model_init_kwargs: Optional[Dict] = None,
+        model_adapter_name: Optional[str] = None,
+        ref_adapter_name: Optional[str] = None,
     ):
         if model_init_kwargs is None:
             model_init_kwargs = {}
@@ -155,8 +158,14 @@ class SPINTrainer(Trainer):
                 "You passed a model_id to the SPINTrainer. This will automatically create an "
                 "`AutoModelForCausalLM` or a `PeftModel` (if you passed a `peft_config`) for you."
             )
-            # with deepspeed.zero.Init():
             model = AutoModelForCausalLM.from_pretrained(model, **model_init_kwargs)
+
+        if isinstance(ref_model, str):
+            warnings.warn(
+                "You passed a ref model_id to the SPINTrainer. This will automatically create an "
+                "`AutoModelForCausalLM`"
+            )
+            ref_model = AutoModelForCausalLM.from_pretrained(ref_model, **ref_model_init_kwargs)
 
         if not is_peft_available() and peft_config is not None:
             raise ValueError(
@@ -222,7 +231,16 @@ class SPINTrainer(Trainer):
             self.is_encoder_decoder = is_encoder_decoder
 
         self.is_peft_model = is_peft_available() and isinstance(model, PeftModel)
+        self.model_adapter_name = model_adapter_name
+        self.ref_adapter_name = ref_adapter_name
 
+        if ref_model:
+            self.ref_model = ref_model
+        elif self.is_peft_model:
+            # The `model` with adapters turned off will be used as the reference model
+            self.ref_model = None
+        else:
+            self.ref_model = create_reference_model(model)
 
         if data_collator is None:
             if tokenizer is None:
@@ -278,6 +296,8 @@ class SPINTrainer(Trainer):
 
         if disable_dropout:
             disable_dropout_in_model(model)
+            if self.ref_model is not None:
+                disable_dropout_in_model(self.ref_model)
 
         self.max_length = max_length
         self.generate_during_eval = generate_during_eval
@@ -307,22 +327,6 @@ class SPINTrainer(Trainer):
             raise AttributeError(
                 "Your `Trainer` does not have an `accelerator` object. Consider upgrading `transformers`."
             )
-
-        if isinstance(ref_model, str):
-            warnings.warn(
-                "You passed a ref model_id to the SPINTrainer. This will automatically create an "
-                "`AutoModelForCausalLM`"
-            )
-            # with deepspeed.zero.Init():
-            ref_model = AutoModelForCausalLM.from_pretrained(ref_model, **ref_model_init_kwargs)
-
-        if ref_model:
-            self.ref_model = ref_model
-        elif self.is_peft_model:
-            # The `model` with adapters turned off will be used as the reference model
-            self.ref_model = None
-        else:
-            self.ref_model = create_reference_model(model)
 
         if self.ref_model is None:
             if not hasattr(self.accelerator.unwrap_model(self.model), "disable_adapter"):
@@ -533,6 +537,18 @@ class SPINTrainer(Trainer):
 
         return (real_logps, generated_logps, real_logits, generated_logits)
 
+    @contextmanager
+    def null_ref_context(self):
+        """Context manager for handling null reference model (that is, peft adapter manipulation)."""
+        with self.accelerator.unwrap_model(
+            self.model
+        ).disable_adapter() if self.is_peft_model and not self.ref_adapter_name else nullcontext():
+            if self.ref_adapter_name:
+                self.model.set_adapter(self.ref_adapter_name)
+            yield
+            if self.ref_adapter_name:
+                self.model.set_adapter(self.model_adapter_name or "default")
+
     def get_batch_metrics(
         self,
         model,
@@ -549,12 +565,22 @@ class SPINTrainer(Trainer):
             policy_generated_logits,
         ) = self.concatenated_forward(model, batch)
         with torch.no_grad():
-            (
-                opponent_real_logps,
-                opponent_generated_logps,
-                _,
-                _,
-            ) = self.concatenated_forward(self.ref_model, batch)
+            if self.ref_model is None:
+                with self.null_ref_context():
+                    (
+                        opponent_real_logps,
+                        opponent_generated_logps,
+                        _,
+                        _,
+                    ) = self.concatenated_forward(self.model, batch)
+            else:
+                (
+                    opponent_real_logps,
+                    opponent_generated_logps,
+                    _,
+                    _,
+                ) = self.concatenated_forward(self.ref_model, batch)
+
         losses, real_rewards, generated_rewards = self.spin_loss(
             policy_real_logps,
             policy_generated_logps,
