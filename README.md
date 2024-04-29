@@ -64,16 +64,12 @@ The following steps provide the necessary setup to run our codes.
 conda create -n myenv python=3.10
 conda activate myenv
 ```
-2. Install PyTorch `v2.1.0` with compatible cuda version, following instructions from [PyTorch Installation Page](https://pytorch.org/get-started/locally/). For example with cuda 11:
-```
-pip install torch==2.1.0 torchvision==0.16.0 torchaudio==2.1.0 --index-url https://download.pytorch.org/whl/cu118
-```
-3. Install the following Python dependencies to run the codes.
+2. Install the following Python dependencies to run the codes.
 ```
 python -m pip install .
 python -m pip install flash-attn --no-build-isolation
 ```
-4. Login to your huggingface account for downloading models
+3. Login to your huggingface account for downloading models
 ```
 huggingface-cli login --token "${your_access_token}"
 ```
