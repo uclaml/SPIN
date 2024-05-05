@@ -17,6 +17,7 @@ Authors: [Zixiang Chen](https://sites.google.com/view/zxchen)\*, [Yihe Deng](htt
 
 
 ## 🔔 News 
+- **[05/01/2024]** SPIN has been accepted by ICML2024!
 - **[04/06/2024]** We released the training scripts to reproduce our results.
 - **[04/04/2024]** ❗ We've discovered that the datasets previously uploaded are incorrect. We've re-upload the corrected datasets.
 - **[02/13/2024]** We updated our arXiv v2: https://arxiv.org/abs/2401.01335.
@@ -244,6 +245,11 @@ By following these steps, you should be able to reproduce our results.
 
 ## Evaluation
 For our evaluation on the Open LLM Leaderboard, please use the [lm-evaluation-harness](https://github.com/EleutherAI/lm-evaluation-harness) repository at v0.4.0. Also, note that we set the number of few shot examples to be the same as instructed on the [Leaderboard](https://huggingface.co/spaces/HuggingFaceH4/open_llm_leaderboard). Different evaluation versions results in different scores, but the trend will remain the same.
+
+
+## Star History
+
+[![Star History Chart](https://api.star-history.com/svg?repos=uclaml/SPIN&type=Date)](https://star-history.com/#uclaml/SPIN&Date)
 
 ## Citation
 If you find this repo useful for your research, please consider citing the paper
