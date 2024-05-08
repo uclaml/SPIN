@@ -244,7 +244,7 @@ By following these steps, you should be able to reproduce our results.
 ---
 
 ## Evaluation
-For our evaluation on the Open LLM Leaderboard, please use the [lm-evaluation-harness](https://github.com/EleutherAI/lm-evaluation-harness) repository at v0.4.0. Also, note that we set the number of few shot examples to be the same as instructed on the [Leaderboard](https://huggingface.co/spaces/HuggingFaceH4/open_llm_leaderboard). Different evaluation versions results in different scores, but the trend will remain the same.
+For our evaluation on the Open LLM Leaderboard, please use this [lm-evaluation-harness](https://github.com/EleutherAI/lm-evaluation-harness/tree/46c796644913cd99da7eee868e64f9ed6af33407) which is v0.4.0. Also, note that we set the number of few shot examples to be the same as instructed on the [Leaderboard](https://huggingface.co/spaces/HuggingFaceH4/open_llm_leaderboard). Different evaluation versions results in different scores, but the trend will remain the same.
 
 
 ## Star History
