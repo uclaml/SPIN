@@ -24,38 +24,7 @@ from alignment import (
 from peft import PeftConfig, PeftModel
 from alignment import SPINTrainer
 from torch.utils.data import Subset
-import re
-
-def apply_chat_template(
-    example, tokenizer, task, assistant_prefix="<|assistant|>\n"
-):
-    def _strip_prefix(s, pattern):
-        # Use re.escape to escape any special characters in the pattern
-        return re.sub(f"^{re.escape(pattern)}", "", s)
-
-    if all(k in example.keys() for k in ("real", "generated")):
-        # Compared to reward modeling, we filter out the prompt, so the text is everything after the last assistant token
-        prompt_messages = [[msg for msg in example["real"] if msg["role"] == "user"][0]]
-        # Insert system message
-        if example["real"][0]["role"] != "system":
-            prompt_messages.insert(0, {"role": "system", "content": ""})
-        else:
-            prompt_messages.insert(0, example["real"][0])
-
-        real_messages = example["real"][1:]
-        generated_messages = example["generated"][1:]
-        example["text_real"] = tokenizer.apply_chat_template(real_messages, tokenize=False)
-        example["text_generated"] = tokenizer.apply_chat_template(generated_messages, tokenize=False)
-        example["text_prompt"] = tokenizer.apply_chat_template(
-            prompt_messages, tokenize=False, add_generation_prompt=True
-        )
-        example["text_real"] = _strip_prefix(example["text_real"], assistant_prefix)
-        example["text_generated"] = _strip_prefix(example["text_generated"], assistant_prefix)
-    else:
-        raise ValueError(
-            f"Require `[real, generated]` keys but found {list(example.keys())}"
-            )
-    return example
+from alignment.data import prepare_datasets
 
 logger = logging.getLogger(__name__)
 
@@ -96,7 +65,6 @@ def main():
     logger.info(
         f"Training on the following splits: {[split + ' : ' + str(dset.num_rows) for split, dset in raw_datasets.items()]}"
     )
-    column_names = list(raw_datasets["train"].features)
 
     #####################################
     # Load tokenizer and process datasets
@@ -107,19 +75,9 @@ def main():
     #####################
     # Apply chat template
     #####################
-    raw_datasets = raw_datasets.map(
-        apply_chat_template,
-        fn_kwargs={"tokenizer": tokenizer, "task": "spin"},
-        num_proc=data_args.preprocessing_num_workers,
-        remove_columns=column_names,
-        desc="Formatting comparisons with prompt template",
+    raw_datasets = prepare_datasets(
+        raw_datasets, tokenizer, num_proc=data_args.preprocessing_num_workers, alpha=training_args.alpha
     )
-
-    # Replace column names with what TRL needs, text_real -> real and text_generated -> generated
-    for split in ["train", "test"]:
-        raw_datasets[split] = raw_datasets[split].rename_columns(
-            {"text_prompt": "prompt", "text_real": "real", "text_generated": "generated"}
-        )
 
     torch_dtype = (
         model_args.torch_dtype if model_args.torch_dtype in ["auto", None] else getattr(torch, model_args.torch_dtype)
@@ -155,6 +113,7 @@ def main():
         ref_model_init_kwargs=ref_model_kwargs,
         args=training_args,
         beta=training_args.beta,
+        alpha=training_args.alpha,
         train_dataset=raw_datasets["train"],
         eval_dataset=raw_datasets["test"],
         tokenizer=tokenizer,

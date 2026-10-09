@@ -56,6 +56,9 @@ class SPINTrainer(Trainer):
             reference model is provided, the trainer will create a reference model with the same architecture as the model to be optimized.
         beta (`float`, defaults to 0.1):
             The beta factor in SPIN loss. Higher beta means less divergence from the initial policy.
+        alpha (`float`, optional):
+            Weight of the (real, generated) training loss. The (revised, generated) loss gets 1 - alpha.
+            Defaults to args.alpha, or 0.5. Evaluation always uses the original pair without weighting.
         loss_type (`str`, defaults to `"sigmoid"`):
             The type of SPIN loss to use. Either `"sigmoid"` the default SPIN loss or `"hinge"` loss from SLiC paper.
         args (`transformers.TrainingArguments`):
@@ -140,7 +143,11 @@ class SPINTrainer(Trainer):
         ref_model_init_kwargs: Optional[Dict] = None,
         model_adapter_name: Optional[str] = None,
         ref_adapter_name: Optional[str] = None,
+        alpha: Optional[float] = None,
     ):
+        self.alpha = getattr(args, "alpha", 0.5) if alpha is None else alpha
+        if not 0.0 <= self.alpha <= 1.0:
+            raise ValueError("alpha must be between 0 and 1.")
         if model_init_kwargs is None:
             model_init_kwargs = {}
         elif not isinstance(model, str):
@@ -374,43 +381,34 @@ class SPINTrainer(Trainer):
         model.eval()
         return model
 
-    def concatenated_inputs(self, batch: Dict[str, Union[List, torch.LongTensor]]) -> Dict[str, torch.LongTensor]:
-        """Concatenate the real and generated inputs into a single tensor.
-
-        Args:
-            batch: A batch of data. Must contain the keys 'åreal_input_ids' and 'generated_input_ids', which are tensors of shape (batch_size, sequence_length).
-
-        Returns:
-            A dictionary containing the concatenated inputs under the key 'concatenated_input_ids'.
-        """
+    def concatenated_inputs(
+        self, batch: Dict[str, Union[List, torch.LongTensor]], include_revised: bool = True
+    ) -> Dict[str, torch.LongTensor]:
+        """Concatenate real, generated, and optionally revised for one model forward pass."""
+        responses = ["real", "generated"]
+        if include_revised and "revised_labels" in batch:
+            responses.append("revised")
+        length_key = "labels" if self.is_encoder_decoder else "input_ids"
+        max_length = max(batch[f"{name}_{length_key}"].shape[1] for name in responses)
         concatenated_batch = {}
+        for key, value in batch.items():
+            if not key.startswith("real_") or not isinstance(value, torch.Tensor):
+                continue
+            suffix = key[len("real_"):]
+            if suffix == "labels":
+                pad_value = self.label_pad_token_id
+            elif suffix == "attention_mask":
+                pad_value = 0
+            else:
+                pad_value = self.padding_value
+            concatenated_batch[f"concatenated_{suffix}"] = torch.cat(
+                [pad_to_length(batch[f"{name}_{suffix}"], max_length, pad_value=pad_value) for name in responses],
+                dim=0,
+            ).to(self.accelerator.device)
 
         if self.is_encoder_decoder:
-            max_length = max(batch["real_labels"].shape[1], batch["generated_labels"].shape[1])
-        else:
-            max_length = max(batch["real_input_ids"].shape[1], batch["generated_input_ids"].shape[1])
-
-        for k in batch:
-            if k.startswith("real") and isinstance(batch[k], torch.Tensor):
-                pad_value = self.label_pad_token_id if "labels" in k or self.is_encoder_decoder else self.padding_value
-                concatenated_key = k.replace("real", "concatenated")
-                concatenated_batch[concatenated_key] = pad_to_length(batch[k], max_length, pad_value=pad_value)
-        for k in batch:
-            if k.startswith("generated") and isinstance(batch[k], torch.Tensor):
-                pad_value = self.label_pad_token_id if "labels" in k or self.is_encoder_decoder else self.padding_value
-                concatenated_key = k.replace("generated", "concatenated")
-                concatenated_batch[concatenated_key] = torch.cat(
-                    (
-                        concatenated_batch[concatenated_key],
-                        pad_to_length(batch[k], max_length, pad_value=pad_value),
-                    ),
-                    dim=0,
-                ).to(self.accelerator.device)
-
-        if self.is_encoder_decoder:
-            concatenated_batch["concatenated_input_ids"] = batch["prompt_input_ids"].repeat(2, 1)
-            concatenated_batch["concatenated_attention_mask"] = batch["prompt_attention_mask"].repeat(2, 1)
-
+            concatenated_batch["concatenated_input_ids"] = batch["prompt_input_ids"].repeat(len(responses), 1)
+            concatenated_batch["concatenated_attention_mask"] = batch["prompt_attention_mask"].repeat(len(responses), 1)
         return concatenated_batch
 
     def spin_loss(
@@ -454,15 +452,6 @@ class SPINTrainer(Trainer):
         real_rewards = self.beta * (policy_real_logps - opponent_real_logps).detach()
         generated_rewards = self.beta * (policy_generated_logps - opponent_generated_logps).detach()
 
-        print(f"losses: {losses}")
-        print(f"policy_real_logps: {policy_real_logps}")
-        print(f"policy_generated_logps: {policy_generated_logps}")
-        print(f"opponent_real_logps: {opponent_real_logps}")
-        print(f"opponent_generated_logps: {opponent_generated_logps}")
-        print(f"logits: {logits}")
-        print(f"real_rewards: {real_rewards}")
-        print(f"generated_rewards: {generated_rewards}")
-        
         return losses, real_rewards, generated_rewards
 
     def _get_batch_logps(
@@ -500,15 +489,11 @@ class SPINTrainer(Trainer):
             return (per_token_logps * loss_mask).sum(-1)
 
     def concatenated_forward(
-        self, model: nn.Module, batch: Dict[str, Union[List, torch.LongTensor]]
-    ) -> Tuple[torch.FloatTensor, torch.FloatTensor, torch.FloatTensor, torch.FloatTensor]:
-        """Run the given model on the given batch of inputs, concatenating the real and generated inputs together.
-
-        We do this to avoid doing two forward passes, because it's faster for FSDP.
-        """
-        concatenated_batch = self.concatenated_inputs(batch)
-        len_real = batch["real_labels"].shape[0]
-
+        self, model: nn.Module, batch: Dict[str, Union[List, torch.LongTensor]], include_revised: bool = True
+    ) -> Dict[str, Tuple[torch.FloatTensor, torch.FloatTensor]]:
+        """Return log probabilities and logits for each response using a single forward pass."""
+        concatenated_batch = self.concatenated_inputs(batch, include_revised=include_revised)
+        batch_size = batch["real_labels"].shape[0]
         model_kwargs = (
             {
                 "labels": concatenated_batch["concatenated_labels"],
@@ -522,20 +507,16 @@ class SPINTrainer(Trainer):
             attention_mask=concatenated_batch["concatenated_attention_mask"],
             **model_kwargs,
         ).logits.to(torch.float32)
-
         all_logps = self._get_batch_logps(
-            all_logits,
-            concatenated_batch["concatenated_labels"],
-            average_log_prob=False,
+            all_logits, concatenated_batch["concatenated_labels"], average_log_prob=False
         )
-
-        real_logps = all_logps[:len_real]
-        generated_logps = all_logps[len_real:]
-
-        real_logits = all_logits[:len_real]
-        generated_logits = all_logits[len_real:]
-
-        return (real_logps, generated_logps, real_logits, generated_logits)
+        responses = ["real", "generated"]
+        if include_revised and "revised_labels" in batch:
+            responses.append("revised")
+        return {
+            name: (all_logps[i * batch_size:(i + 1) * batch_size], all_logits[i * batch_size:(i + 1) * batch_size])
+            for i, name in enumerate(responses)
+        }
 
     @contextmanager
     def null_ref_context(self):
@@ -555,50 +536,45 @@ class SPINTrainer(Trainer):
         batch: Dict[str, Union[List, torch.LongTensor]],
         train_eval: Literal["train", "eval"] = "train",
     ):
-        """Compute the SPIN loss and other metrics for the given batch of inputs for train or test."""
-        metrics = {}
-
-        (
-            policy_real_logps,
-            policy_generated_logps,
-            policy_real_logits,
-            policy_generated_logits,
-        ) = self.concatenated_forward(model, batch)
+        """Use weighted pairs for training and the original pair for evaluation."""
+        include_revised = train_eval == "train" and self.alpha < 1.0
+        if include_revised and "revised_labels" not in batch:
+            raise ValueError("Training with alpha < 1 requires revised responses in every batch.")
+        policy = self.concatenated_forward(model, batch, include_revised=include_revised)
         with torch.no_grad():
             if self.ref_model is None:
                 with self.null_ref_context():
-                    (
-                        opponent_real_logps,
-                        opponent_generated_logps,
-                        _,
-                        _,
-                    ) = self.concatenated_forward(self.model, batch)
+                    opponent = self.concatenated_forward(self.model, batch, include_revised=include_revised)
             else:
-                (
-                    opponent_real_logps,
-                    opponent_generated_logps,
-                    _,
-                    _,
-                ) = self.concatenated_forward(self.ref_model, batch)
+                opponent = self.concatenated_forward(self.ref_model, batch, include_revised=include_revised)
 
-        losses, real_rewards, generated_rewards = self.spin_loss(
-            policy_real_logps,
-            policy_generated_logps,
-            opponent_real_logps,
-            opponent_generated_logps,
+        real_losses, real_rewards, generated_rewards = self.spin_loss(
+            policy["real"][0], policy["generated"][0], opponent["real"][0], opponent["generated"][0]
         )
-        reward_accuracies = (real_rewards > generated_rewards).float()
-
+        losses = real_losses
         prefix = "eval_" if train_eval == "eval" else ""
-        metrics[f"{prefix}rewards/real"] = real_rewards.cpu().mean()
-        metrics[f"{prefix}rewards/generated"] = generated_rewards.cpu().mean()
-        metrics[f"{prefix}rewards/accuracies"] = reward_accuracies.cpu().mean()
-        metrics[f"{prefix}rewards/margins"] = (real_rewards - generated_rewards).cpu().mean()
-        metrics[f"{prefix}logps/generated"] = policy_generated_logps.detach().cpu().mean()
-        metrics[f"{prefix}logps/real"] = policy_real_logps.detach().cpu().mean()
-        metrics[f"{prefix}logits/generated"] = policy_generated_logits.detach().cpu().mean()
-        metrics[f"{prefix}logits/real"] = policy_real_logits.detach().cpu().mean()
-
+        metrics = {
+            f"{prefix}loss/real": real_losses.detach().cpu().mean(),
+            f"{prefix}rewards/real": real_rewards.cpu().mean(),
+            f"{prefix}rewards/generated": generated_rewards.cpu().mean(),
+            f"{prefix}rewards/accuracies": (real_rewards > generated_rewards).float().cpu().mean(),
+            f"{prefix}rewards/margins": (real_rewards - generated_rewards).cpu().mean(),
+        }
+        if include_revised:
+            revised_losses, revised_rewards, _ = self.spin_loss(
+                policy["revised"][0], policy["generated"][0], opponent["revised"][0], opponent["generated"][0]
+            )
+            losses = self.alpha * real_losses + (1.0 - self.alpha) * revised_losses
+            metrics.update({
+                "loss/revised": revised_losses.detach().cpu().mean(),
+                "loss/weighted": losses.detach().cpu().mean(),
+                "rewards/revised": revised_rewards.cpu().mean(),
+                "rewards/revised_accuracies": (revised_rewards > generated_rewards).float().cpu().mean(),
+                "rewards/revised_margins": (revised_rewards - generated_rewards).cpu().mean(),
+            })
+        for name, (logps, logits) in policy.items():
+            metrics[f"{prefix}logps/{name}"] = logps.detach().cpu().mean()
+            metrics[f"{prefix}logits/{name}"] = logits.detach().mean().cpu()
         return losses.mean(), metrics
 
     def compute_loss(

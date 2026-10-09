@@ -189,6 +189,43 @@ python spin/convert_data.py --output_dir new_data/iter0 --input_dir generated/it
 ```
 
 ### Step 2: Fine-tuning
+
+Training now uses both `(real, generated)` and `(revised, generated)` preference pairs:
+
+\[
+\mathcal L = \alpha\mathcal L_{\mathrm{SPIN}}(x; y, y')
+             + (1-\alpha)\mathcal L_{\mathrm{SPIN}}(x; y^+, y').
+\]
+
+`alpha` defaults to `0.5`. Each training example must contain `real`, `generated`, and
+`revised` conversations with identical prompt messages and a final assistant response.
+`revised` is the improved response (`y+`). Test examples still contain only `real` and
+`generated`; evaluation computes the original SPIN loss without multiplying it by `alpha`.
+Both training terms use the same generated response and the same frozen reference model.
+
+For local data, put your JSON arrays in `train.json` and `test.json` in one directory,
+then point `dataset_mixer` at that directory. JSONL and the existing `train*.parquet` /
+`test*.parquet` files are also supported. Splits are loaded separately to allow different
+columns. For example:
+
+```yaml
+dataset_mixer:
+  /path/to/revised_data: 1.0
+dataset_splits: [train, test]
+alpha: 0.5
+```
+
+The original published datasets do not provide `revised`; supply your augmented training
+data for **every** dataset in the mixer, including previous iterations. Missing revised
+training responses raise an error instead of silently dropping the new loss term.
+Set `alpha: 1.0` to run the original objective with the original data. Values outside
+`[0, 1]` are rejected; `alpha: 0.0` trains only on `(revised, generated)`.
+
+The trainer logs `loss/real`, `loss/revised`, and `loss/weighted`, along with revised
+response rewards. All three responses share the truncated prompt; the longest response
+determines truncation. A training forward pass contains three responses per example,
+so GPU memory requirements can increase relative to the original pair-only training.
+
 ```
 accelerate launch --config_file configs/multi_gpu.yaml --num_processes=8 --main_process_port 29500 spin/run_spin.py configs/config.yaml
 ```
@@ -210,6 +247,8 @@ You might need to change the configuration in `configs/config.yaml`. Here are so
     - default: 3
 - `beta`: beta in SPIN.
     - default: 0.1
+- `alpha`: weight of the original `(real, generated)` training loss.
+    - default: 0.5; can also be overridden with `--alpha=0.5` after the YAML path.
 
 In our experiments, we do full fine-tuning on a multi-GPU machine with DeepSpeed ZeRO-3 (requires A100 (80GB)).
 
@@ -217,6 +256,12 @@ __Example__.
 ```
 bash scripts/finetune.sh
 ```
+
+Offline training regression tests (with the development dependencies installed):
+```bash
+PYTHONPATH=spin python -m pytest tests -q
+```
+
 ## Reproducing Our Results
 
 To help reproducing our results, we have made available the scripts corresponding to all four iterations of our study. These scripts are pre-configured with the exact parameters and model versions used in our paper. For each iteration, the base model is initialized with the version released on 🤗 HuggingFace, which can be found at the following links:

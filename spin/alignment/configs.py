@@ -247,6 +247,10 @@ class SFTConfig(transformers.TrainingArguments):
 @dataclass
 class SPINConfig(transformers.TrainingArguments):
 
+    alpha: float = field(
+        default=0.5,
+        metadata={"help": "Weight of the (real, generated) loss; (revised, generated) receives 1 - alpha."},
+    )
     beta: Optional[float] = field(
         default=0.1,
         metadata={"help": "The beta factor in SPIN loss. Higher beta means less divergence from the initial policy."},
@@ -269,3 +273,8 @@ class SPINConfig(transformers.TrainingArguments):
     )
     optim: Optional[str] = field(default="rmsprop")
     remove_unused_columns: bool = field(default=False)
+
+    def __post_init__(self):
+        if not 0.0 <= self.alpha <= 1.0:
+            raise ValueError("alpha must be between 0 and 1.")
+        super().__post_init__()

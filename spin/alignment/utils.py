@@ -52,6 +52,7 @@ class DataCollatorWithPadding:
         prompt: str,
         chosen: str,
         rejected: str,
+        revised: Optional[str] = None,
     ) -> Dict:
         """Tokenize a single batch element.
 
@@ -64,10 +65,14 @@ class DataCollatorWithPadding:
             label_pad_token_id  for the prompt tokens.
         """
         batch = {}
+        responses = {"real": chosen, "generated": rejected}
+        if revised is not None:
+            responses["revised"] = revised
 
         if not self.is_encoder_decoder:
-            chosen_tokens = self.tokenizer(chosen, add_special_tokens=False)
-            rejected_tokens = self.tokenizer(rejected, add_special_tokens=False)
+            response_tokens = {
+                name: self.tokenizer(text, add_special_tokens=False) for name, text in responses.items()
+            }
             prompt_tokens = self.tokenizer(prompt, add_special_tokens=False)
 
             eos_token_id = self.tokenizer.eos_token_id
@@ -79,27 +84,16 @@ class DataCollatorWithPadding:
             ]
             prompt_tokens["attention_mask"] = new_attention_mask
 
-            # do the same for chosen and rejected
-            eos_indices_chosen = [i for i, x in enumerate(chosen_tokens["input_ids"]) if x == eos_token_id]
-            new_attention_mask_c = [
-                0 if i in eos_indices_chosen else p for i, p in enumerate(chosen_tokens["attention_mask"])
-            ]
-            chosen_tokens["attention_mask"] = new_attention_mask_c
+            for tokens in response_tokens.values():
+                tokens["attention_mask"] = [
+                    0 if token == eos_token_id else mask
+                    for token, mask in zip(tokens["input_ids"], tokens["attention_mask"])
+                ]
+                tokens["input_ids"].append(eos_token_id)
+                tokens["attention_mask"].append(1)
 
-            eos_indices_rejected = [i for i, x in enumerate(rejected_tokens["input_ids"]) if x == eos_token_id]
-            new_attention_mask_r = [
-                0 if i in eos_indices_rejected else p for i, p in enumerate(rejected_tokens["attention_mask"])
-            ]
-            rejected_tokens["attention_mask"] = new_attention_mask_r
-
-            # add EOS token to end of prompt
-            chosen_tokens["input_ids"].append(self.tokenizer.eos_token_id)
-            chosen_tokens["attention_mask"].append(1)
-
-            rejected_tokens["input_ids"].append(self.tokenizer.eos_token_id)
-            rejected_tokens["attention_mask"].append(1)
-
-            longer_response_length = max(len(chosen_tokens["input_ids"]), len(rejected_tokens["input_ids"]))
+            # All responses share the same truncated prompt and generated response.
+            longer_response_length = max(len(tokens["input_ids"]) for tokens in response_tokens.values())
 
             # if combined sequence is too long, truncate the prompt
             if len(prompt_tokens["input_ids"]) + longer_response_length > self.max_length:
@@ -112,60 +106,45 @@ class DataCollatorWithPadding:
 
             # if that's still too long, truncate the response
             if len(prompt_tokens["input_ids"]) + longer_response_length > self.max_length:
-                chosen_tokens = {k: v[: self.max_length - self.max_prompt_length] for k, v in chosen_tokens.items()}
-                rejected_tokens = {
-                    k: v[: self.max_length - self.max_prompt_length] for k, v in rejected_tokens.items()
+                response_tokens = {
+                    name: {k: v[: self.max_length - self.max_prompt_length] for k, v in tokens.items()}
+                    for name, tokens in response_tokens.items()
                 }
 
             # Create labels
-            chosen_sequence_tokens = {k: prompt_tokens[k] + chosen_tokens[k] for k in chosen_tokens}
-            rejected_sequence_tokens = {k: prompt_tokens[k] + rejected_tokens[k] for k in rejected_tokens}
-            chosen_sequence_tokens["labels"] = chosen_sequence_tokens["input_ids"][:]
-            chosen_sequence_tokens["labels"][: len(prompt_tokens["input_ids"])] = [self.label_pad_token_id] * len(
-                prompt_tokens["input_ids"]
-            )
-            rejected_sequence_tokens["labels"] = rejected_sequence_tokens["input_ids"][:]
-            rejected_sequence_tokens["labels"][: len(prompt_tokens["input_ids"])] = [self.label_pad_token_id] * len(
-                prompt_tokens["input_ids"]
-            )
+            sequences = {"prompt": prompt_tokens}
+            for name, tokens in response_tokens.items():
+                sequence = {k: prompt_tokens[k] + tokens[k] for k in tokens}
+                sequence["labels"] = sequence["input_ids"][:]
+                sequence["labels"][: len(prompt_tokens["input_ids"])] = [self.label_pad_token_id] * len(
+                    prompt_tokens["input_ids"]
+                )
+                sequences[name] = sequence
 
-            for k, toks in {
-                "real": chosen_sequence_tokens,
-                "generated": rejected_sequence_tokens,
-                "prompt": prompt_tokens,
-            }.items():
+            for k, toks in sequences.items():
                 for type_key, tokens in toks.items():
                     if type_key == "token_type_ids":
                         continue
                     batch[f"{k}_{type_key}"] = tokens
 
         else:
-            chosen_tokens = self.tokenizer(
-                chosen, truncation=True, max_length=self.max_target_length, add_special_tokens=True
-            )
-            rejected_tokens = self.tokenizer(
-                rejected, truncation=True, max_length=self.max_target_length, add_special_tokens=True
-            )
             prompt_tokens = self.tokenizer(
                 prompt, truncation=True, max_length=self.max_prompt_length, add_special_tokens=True
             )
 
-            batch["chosen_labels"] = chosen_tokens["input_ids"]
-            batch["rejected_labels"] = rejected_tokens["input_ids"]
             batch["prompt_input_ids"] = prompt_tokens["input_ids"]
             batch["prompt_attention_mask"] = prompt_tokens["attention_mask"]
-
-            if self.model is not None and hasattr(self.model, "prepare_decoder_input_ids_from_labels"):
-                batch["rejected_decoder_input_ids"] = self.model.prepare_decoder_input_ids_from_labels(
-                    labels=batch["rejected_labels"]
+            for name, text in responses.items():
+                tokens = self.tokenizer(
+                    text, truncation=True, max_length=self.max_target_length, add_special_tokens=True
                 )
-                batch["chosen_decoder_input_ids"] = self.model.prepare_decoder_input_ids_from_labels(
-                    labels=batch["chosen_labels"]
-                )
+                batch[f"{name}_labels"] = tokens["input_ids"]
 
         batch["prompt"] = prompt
         batch["real"] = prompt + chosen
         batch["generated"] = prompt + rejected
+        if revised is not None:
+            batch["revised"] = prompt + revised
         batch["chosen_response_only"] = chosen
         batch["rejected_response_only"] = rejected
 
@@ -183,7 +162,7 @@ class DataCollatorWithPadding:
                         padding_value = self.tokenizer.pad_token_id
                     elif k.endswith("_attention_mask"):
                         padding_value = 0
-                    elif (k.startswith("real")) or (k.startswith("generated")) or ("decoder" in k):
+                    elif k.endswith("_labels"):
                         padding_value = self.label_pad_token_id
                     else:
                         raise ValueError(f"Unexpected key in batch '{k}'")
@@ -199,7 +178,7 @@ class DataCollatorWithPadding:
                     elif k.endswith("_labels"):
                         padding_value = self.label_pad_token_id
                     elif k.endswith("_attention_mask"):
-                        padding_value = self.padding_value
+                        padding_value = 0
                     else:
                         raise ValueError(f"Unexpected key in batch '{k}'")
 
@@ -214,13 +193,16 @@ class DataCollatorWithPadding:
 
     def __call__(self, features: List[Dict[str, Any]]) -> Dict[str, Any]:
         tokenized_batch = []
+        has_revised = [feature.get("revised") is not None for feature in features]
+        if any(has_revised) and not all(has_revised):
+            raise ValueError("A batch must provide revised for every example or for none of them.")
 
         for feature in features:
             prompt = feature["prompt"]
             chosen = feature["real"]
             rejected = feature["generated"]
 
-            batch_element = self.tokenize_batch_element(prompt, chosen, rejected)
+            batch_element = self.tokenize_batch_element(prompt, chosen, rejected, feature.get("revised"))
             tokenized_batch.append(batch_element)
 
         # return collated batch
